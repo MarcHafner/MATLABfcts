@@ -28,16 +28,16 @@ nR = max(t_CL.Replicate);
 for iR = 1:nR
     t_ctrl_plate = t_CL(t_CL.Replicate==iR & t_CL.Ctrl==1,...
         {'Row','Column','Cellcount'});
-    
+
     if figtag
         a1 = get_newaxes([.04+(iR-1)/nR .4 -.05+.95/nR .5],1);
         a2 = get_newaxes([.04+(iR-1)/nR .05 -.05+.95/nR .3],1);
     else
         a1 =[];a2 = [];
     end
-    
+
     [ratios(iR), pvals(iR)] = compare_edge_center(t_ctrl_plate, bins, a1, a2, CellLine);
-    
+
     idxes = t_CL.Replicate==iR;
     t_CLcorrected(idxes,:) = apply_edge_correction(t_CL(idxes,:), ...
         ratios(iR), pvals(iR));
@@ -51,16 +51,16 @@ nD0 = max(t_CL.Day0);
 for iD0 = 1:max(t_CL.Day0)
     idxes = t_CL.Day0==iD0;
     t_ctrl_plate = t_CL(idxes,{'Row','Column','Cellcount'});
-    
+
     if figtag
         a1 = get_newaxes([.04+(iD0-1)/nD0 .4 -.05+.95/nD0 .5],1);
         a2 = get_newaxes([.04+(iD0-1)/nD0 .05 -.05+.95/nD0 .3],1);
     else
         a1 =[];a2 = [];
     end
-    
+
     [ratio, pval] = compare_edge_center(t_ctrl_plate, bins, a1, a2, CellLine);
-    
+
     t_CLcorrected(idxes,:) = apply_edge_correction(t_CL(idxes,:), ...
         ratio, pval);
 end
@@ -72,18 +72,18 @@ nUnt = max(t_CL.Untrt);
 for iUnt = 1:nUnt
     idxes = t_CL.Untrt==iUnt;
     t_ctrl_plate = t_CL(idxes,{'Row','Column','Cellcount'});
-    
+
     if figtag
         a1 = get_newaxes([.04+(iUnt-1)/nUnt .4 -.05+.95/nUnt .5],1);
         a2 = get_newaxes([.04+(iUnt-1)/nUnt .05 -.05+.95/nUnt .3],1);
     else
         a1 =[];a2 = [];
     end
-    
+
     [ratio, pval] = compare_edge_center(t_ctrl_plate, bins, a1, a2, CellLine);
     %%% TO IMPROVE: IMPLEMENT A CONTROL FOR ROW BIAS --> FLAG (NO
     %%% CORRECTION
-    
+
     t_CLcorrected(idxes,:) = apply_edge_correction(t_CL(idxes,:), ...
         ratio, pval);
 end
@@ -134,7 +134,7 @@ t_ctrl_plate = [t_ctrl_plate; cell2table(num2cell(...
     [ones(length(missingCol),1) missingCol' NaN(length(missingCol),1);
     missingRow' ones(length(missingRow),1) NaN(length(missingRow),1)]), ...
     'VariableNames', t_ctrl_plate.Properties.VariableNames)];
-    
+
 
 set(gca,'fontsize',8)
 
@@ -166,7 +166,7 @@ if pval<.1
         subt_CL.Column==1 | subt_CL.Column==24) ;
     subt_CLcorrected.Cellcount(edgeIdx) = ...
         subt_CL.Cellcount(edgeIdx)*ratio;
-    
+
     fprintf('\tplate corrected (p=%.2f, ratio=%.2f)\n', ...
         pval, ratio);
 else

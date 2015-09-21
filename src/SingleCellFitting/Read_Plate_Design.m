@@ -42,7 +42,7 @@ while ~feof(file)
     line = fgetl(file);
     line = regexp(line,'\t','split');
     if verbatim,disp(['   ' cellstr2str(line,'~')]),end
-    
+
     if ~isempty(strfind(line{1},'Treatm')) || ~isempty(strfind(line{1},'treatm'))
         disp('all input fields read')
         break,end
@@ -70,15 +70,15 @@ plate_design.Doses = NaN(plate_design.Nwells,nDrugs);
 Wellcnt = 0;
 
 while ~feof(file)
-    
+
     line = fgetl(file);
     line = regexp(line,'\t','split');
     if verbatim,disp(['   ' cellstr2str(line,'~')]),end
-    
+
     Wellcnt = Wellcnt+1;
     plate_design.Wells(Wellcnt,:) = {line{1}(1) str2double(line{1}(2:end)) line{1}};
     plate_design.Doses(Wellcnt,:) = cell2mat(cellfun2(@str2double,line(2:end)));
-    
+
     if feof(file)
         assert(Wellcnt == plate_design.Nwells, ...
             'Number of treatments (%i) inconsistent with specified number of wells (%i)', ...
@@ -86,7 +86,7 @@ while ~feof(file)
         disp('all treatments read')
         break
     end
-    
+
 end
 fclose(file);
 
@@ -118,5 +118,3 @@ for i=1:nDrugs
         plate_design.axes{2}, 'ytick',1:length(plate_design.axes{1}),'yticklabel', ...
         plate_design.axes{1})
 end
-
-

@@ -38,44 +38,44 @@ if length(alphas)<5
 end
 parfor (i = 1:length(alphas), nCore )
 % for i = 1:length(alphas)
-    
+
     tempnVar = zeros(nCL,length(lambdas));
     Prediction = zeros(nCL,length(lambdas));
     tB = zeros(nCL, size(Inputs,2), length(lambdas));
-    
+
     for j=1:nCL
         testidx = setdiff(1:nCL,j);
-        
+
         shiftInputs = mean(Inputs(testidx,:));
         shiftOutputs = mean(Outputs(testidx));
-        
+
         NormInput = Inputs(testidx,:)-repmat(shiftInputs,nCL-1,1);
         NormOutputs = Outputs(testidx)-shiftOutputs;
-        
+
         [B, FitInfo] = lasso(NormInput,NormOutputs,...
             'alpha',alphas(i),'Standardize', false,'Lambda',lambdas);
-        
+
         Prediction(j,:) = (Inputs(j,:)-shiftInputs)*B + ...
             FitInfo.Intercept(:)' + shiftOutputs;
-        
+
          tB(j,:,:) = B;
-        
+
         tempnVar(j,:) = FitInfo.DF;
     end
-    
+
     alltempB(:,:,:,i) = tB;
     allPredOutputs(:,:,i) = Prediction;
     allMSE(i,:) = sum((Prediction - repmat(Outputs,1,length(lambdas))).^2);
-    
+
     tempMCC = 0*lambdas;
     for j=1:length(lambdas)
         tempMCC(j) = PredictionScoring(Prediction(:,j)>BinarizationThres,BinOutputs);
     end
     allMCC(i,:) = tempMCC;
-    
+
     nVars(i,:) = mean(tempnVar);
     fprintf([' ' num2str(i)]);
-    
+
 end
 fprintf('\n');
 toc
@@ -101,16 +101,16 @@ if nargout == 7
     details.allPredOutputs = allPredOutputs;
     details.nVars = nVars;
     details.alltempB = alltempB;
-    
+
     details.Falpha = alphas(alpha);
     details.Flambda = lambdas(lambda);
-    
+
     NormInput = Inputs-repmat(mean(Inputs),nCL,1);
     NormOutputs = Outputs-mean(Outputs);
-    
+
     [details.FB, FitInfo] = lasso(NormInput,NormOutputs,...
         'alpha',details.Falpha,'Standardize',false,'Lambda',details.Flambda);
-    
+
     details.FPrediction = NormInput*details.FB + FitInfo.Intercept' + mean(Outputs);
-        
+
 end

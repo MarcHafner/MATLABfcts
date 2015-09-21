@@ -38,15 +38,15 @@ fprintf('%i cell lines', nCL);
 parfor i=1:nCL
 %     opt = [];for i=1:nCL
     time1 = tic;
-    
+
     testidx = setdiff(1:nCL,i);
-    
+
     shiftInputs = mean(Inputs(testidx,:));
     shiftOutputs = mean(Outputs);
-    
+
     NormInput = Inputs(testidx,:)-repmat(shiftInputs,nCL-1,1);
     NormOutputs = Outputs(testidx)-shiftOutputs;
-    
+
         if useVIP
             [~, ~, ~, ~, ~, ...
                 ~, individual_models(:,i), individual_r2(i), individual_q2(i), details_vip] = ...
@@ -57,9 +57,9 @@ parfor i=1:nCL
                 LV1outCV_PLSRvip(NormInput, NormOutputs, opt);
             vip_cutoff(i) = 0;
         end
-        
+
     CV_Pred(i) = (Inputs(i,:) - mean(Inputs(testidx,:)))*individual_models(:,i) + mean(Outputs(testidx));
-    
+
     steptime(i) = toc(time1);
 end
 
@@ -80,7 +80,7 @@ if useVIP
             LV1outCV_PLSRvip(NormInput, Outputs);
         details.VIPcutoff = 0;
 end
-    
+
 
 if useVIP
     details.optnComp = temp_details.optnComp;
@@ -99,4 +99,3 @@ details.individual_r2 = individual_r2;
 details.individual_q2 = individual_q2;
 
 fprintf('r^2=%.3f . over\n', r2);
-

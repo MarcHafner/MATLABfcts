@@ -1,7 +1,7 @@
 function [t_out, Lidx, Ridx] = leftinnerjoin(t_left, t_right, varargin)
 % [t_out, Lidx, Ridx] = leftinnerjoin(t_left, t_right, varargin)
 %
-%   
+%
 
 [t_out, Lidx, Ridx] = innerjoin(t_left, t_right, varargin{:});
 

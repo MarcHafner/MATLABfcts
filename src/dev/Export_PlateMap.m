@@ -20,7 +20,7 @@ total_output(1+(1:m),1) = num2cell(letter_label);
 total_output(1,2:end) = num2cell(num_label');
 
 for i=1:length(drugs_struct)
-    
+
     for i1 = 1:m
         for i2 = 1:n
             if drugs_struct(i).layout(i1,i2)>0
@@ -36,7 +36,7 @@ for i=1:length(drugs_struct)
             end
         end
     end
-    
+
     temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).nominal_conc ...
         'Volume (nl)=' drugs_struct(i).volume 'Well volume (ul)=' drugs_struct(i).well_volume*1e6 };
     if isfield(drugs_struct(i),'Doses')
@@ -48,7 +48,7 @@ for i=1:length(drugs_struct)
             num2cell(drugs_struct(i).SingleDoses)];
     end
     total_output(m+2+(i-1)*4+(1:3),1:size(temp,2)) = temp;
-    
+
 end
 
 

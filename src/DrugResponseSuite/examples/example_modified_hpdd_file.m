@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% example of the D300/Columbus suite 
+%%% example of the D300/Columbus suite
 %%%     - working from a hpdd file and modifying the layout
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -75,7 +75,7 @@ DrugNames = unique(t_processed.DrugName);
 
 for i=1:length(DrugNames)
     get_newfigure(90+i,[10 10 1600 400], ['HRG_SeedingNumber_' char(DrugNames(i)) '.pdf'])
-    
+
     plot_multidims(t_processed(t_processed.DrugName==DrugNames(i),:), 'yplotkey', 'CellLine', 'xplotkey', 'SeedingNumber', 'yspacing', .1, 'xaxiskey', ...
         'Conc', 'yaxiskey', 'RelCellCnt', 'xtransform', @log10, 'colorkey','modifier', ...
         'axischanges', @(x) set(x,'fontsize',6,'ylim',[0 1.5]))

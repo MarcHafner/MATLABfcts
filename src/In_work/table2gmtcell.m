@@ -3,11 +3,11 @@ function gmt_output = table2gmtcell(t_GeneSet, GeneSetColumn, GeneColumn, label)
 % gmt_output = table2gmtcell(t_GeneSet, GeneSetColumn, GeneColumn, label)
 %
 %   Generate a cell array that has the format of the gmt tsv file. It can
-%   be used as a input for the GSEA anlysis. 
+%   be used as a input for the GSEA anlysis.
 %
 %   t_Families is a table with a column for Gene set/Family and a column
 %   for the genes.
-%   
+%
 %   GeneSetColumn is to specify the name of the column for the set (default
 %   is 'GeneSet' 'Family' 'GeneFamily')
 %

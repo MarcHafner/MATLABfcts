@@ -42,4 +42,3 @@ end
 
 set(gca, 'xtick', 1:lC2, 'xticklabel', num2cellstr(Concs{2},'%.2g'), 'ytick', 1:lC1, ...
     'yticklabel', num2cellstr(Concs{1},'%.2g'), 'fontsize', 6)
-    

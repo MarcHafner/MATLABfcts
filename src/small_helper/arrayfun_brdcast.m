@@ -16,7 +16,7 @@ maxlength = max( cellfun(@length,varargin) .* (cellfun(@iscell,varargin)));
 for i=1:length(varargin)
     if ~iscell(varargin{i}) || length(varargin{i})~=maxlength
         assert( ~iscell(varargin{i}) || length(varargin{i})==1 )
-        
+
         if isvector(varargin{i}) && length(varargin{i})==maxlength
             varargin2{i} = mat2cell(varargin{i});
         else
@@ -27,7 +27,7 @@ for i=1:length(varargin)
         end
     elseif isrow(varargin{i})
         varargin2{i} = varargin{i}';
-    end        
+    end
 end
 
 output = arrayfun(fct, varargin2{:}, 'uniformoutput', false);

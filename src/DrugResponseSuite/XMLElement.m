@@ -5,18 +5,18 @@ classdef XMLElement < handle
     %   % parse .xml into an XMLElement object
     %   p = XMLElement.parse('protocol.hpdd');
     %
-    %   % find first child element with matching tag 
+    %   % find first child element with matching tag
     %   fluids = p.find('Fluids');
     %
-    %   % find *all* matching elements at any depth 
+    %   % find *all* matching elements at any depth
     %   f_elts = fluids.iter('Fluid');
     %
-    %   % print the text content of all fluids' "Name" element 
+    %   % print the text content of all fluids' "Name" element
     %   for i = 1:length(f_elts)
     %       disp(f_elts(i).find('Name').text);
     %   end
 
-    
+
     properties (SetAccess = protected)
         tag = ''
         attributes = struct
@@ -24,9 +24,9 @@ classdef XMLElement < handle
         tail = ''
         children = []
     end
-    
+
     methods
-        
+
         function value = get(self, name)
             for i = 1:length(self.attributes)
                 if strcmp(self.attributes(i).name, name)
@@ -48,7 +48,7 @@ classdef XMLElement < handle
                 end
             end
         end
-        
+
         function elts = iter(self, tag)
             % Note: Returns an array, not an iterator as in lxml.etree.
             if nargin == 1
@@ -72,7 +72,7 @@ classdef XMLElement < handle
         end
 
     end
-    
+
 end
 
 
@@ -86,7 +86,7 @@ function elt = parseXML(filename)
     catch
        error('Failed to read XML file %s.',filename);
     end
-    % Recurse over child nodes. This could run into problems 
+    % Recurse over child nodes. This could run into problems
     % with very deeply nested trees.
     elt = parseChildNodes(tree);
 end

@@ -47,7 +47,7 @@ if exist('labels','var')
             if length(labels)==size(matrix,2)
                 warnprintf('Assuming labels to match first dimension')
             end
-            labels = {num2cellstr(labels, format) {}};            
+            labels = {num2cellstr(labels, format) {}};
         elseif length(labels)==size(matrix,2)
             labels = {{} num2cellstr(labels, format)};
         else

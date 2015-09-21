@@ -8,7 +8,7 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %       - cell array or table (first column is gene symbol,
 %               2nd column is weight)
 %   - Geneset:
-%       - tag (GObp, GOcc, GOmf, allGO, KEGG, Reactome, Biocarta, 
+%       - tag (GObp, GOcc, GOmf, allGO, KEGG, Reactome, Biocarta,
 %               CGN, CGP, OncoSig, BreastCGP)
 %       - filename
 %       - cell array formated as gmt: each rows has the format:
@@ -204,7 +204,7 @@ for i=1:length(res.children)
     for j=1:length(fields)
         values{i,j} = res.children(i).get(fields{j});
     end
-    
+
     values{i,strcmp(fieldnames, 'GeneNames')} =  ...
         Genelist(1+str2num(values{i,strcmp(fields, {'HIT_INDICES'})}),1)';
 end
@@ -261,7 +261,7 @@ if p.Nplot>0
             end
         end
         movefile([Outputfolder filesep Lastrun], [Outputfolder filesep p.Outputname])
-        Lastrun = p.Outputname;        
+        Lastrun = p.Outputname;
     end
     disp(['Results saved in ' Outputfolder filesep p.Outputname])
     disp('Opening report')

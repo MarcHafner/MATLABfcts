@@ -34,7 +34,7 @@ else
     n = sum(~nans,dim);
     n(n==0) = Inf; % prevent divideByZero warnings
     % Sum up non-Infs, and divide by the number of non-Infs.
-    m = sum(x,dim) ./ n;    
+    m = sum(x,dim) ./ n;
 end
 
 m(n==0) = minf(n==0); % conserve vectors with all Inf or all -Inf

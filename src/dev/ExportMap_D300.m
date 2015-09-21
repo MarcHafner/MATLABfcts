@@ -22,13 +22,13 @@ for i=1:length(drugs_struct)
 %     temp_out{1,1} = drugs_struct(i).name;
 %     temp_out{1,2} = num2str(drugs_struct(i).nominal_conc);
 %     temp_out{1,3} = 'mM';
-%     
+%
 %     temp_out(3:end-1,1) = num2cell(letter_label);
 %     temp_out(2,2:end) = num2cell(num_label');
 %     temp_out(3:end-1,2:end) = num2cell(drugs_struct(i).layout);
-%     
+%
 %     output((1:19)+(i-1)*19,:) = temp_out;
-    
+
     for i1 = 1:16
         for i2 = 1:24
             if drugs_struct(i).layout(i1,i2)>0
@@ -44,7 +44,7 @@ for i=1:length(drugs_struct)
             end
         end
     end
-    
+
     temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).nominal_conc ...
         'Volume (nl)=' drugs_struct(i).volume 'Well volume (ul)=' drugs_struct(i).well_volume*1e6 };
     if isfield(drugs_struct(i),'Doses')
@@ -56,7 +56,7 @@ for i=1:length(drugs_struct)
             num2cell(drugs_struct(i).SingleDoses)];
     end
     total_output(18+(i-1)*4+(1:3),1:size(temp,2)) = temp;
-    
+
 end
 
 

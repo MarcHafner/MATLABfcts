@@ -23,17 +23,17 @@ for iPlte = 1:height(t_plateinfo)
     if DesIdx==0
         continue
     end
-    
+
     WellVolume = Designs(DesIdx).well_volume;
     for iDr=1:length(Designs(DesIdx).Drugs)
-        
+
         Drug = Designs(DesIdx).Drugs(iDr).DrugName;
         Didx = find(strcmp({Drugs.DrugName}, Drug));
-    
+
         stock_conc = Drugs(Didx).stock_conc;
-        
+
         Volume(Didx,iPlte) = ceil(100*sum(Designs(DesIdx).Drugs(iDr).layout(:)) ...
-            *WellVolume/stock_conc)/100;        
+            *WellVolume/stock_conc)/100;
     end
 end
 
@@ -43,11 +43,10 @@ output(2:end,3) = cellfun(@(x) {x/1e3}, {Drugs.stock_conc}');
 output(2:end,4) = num2cell(1+ceil(sum(Volume,2)*10)/10);
 output(2:end,5) = num2cell( (1+ceil(sum(Volume,2)*10)/10).*cell2mat({Drugs.stock_conc}')/1e4 );
 output(2:end,6:end) = num2cell(Volume);
-            
-    
+
+
 %%
 cell2tsv(filename, output);
 
 
 end
-

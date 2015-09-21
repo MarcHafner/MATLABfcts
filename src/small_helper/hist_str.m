@@ -3,7 +3,7 @@ function [n, unique_str] = hist_str(allstr, unique_str)
 
 
 if istable(allstr)
-    assert(size(allstr,2)==1,'more than one variable in the table')    
+    assert(size(allstr,2)==1,'more than one variable in the table')
     allstr = allstr.(allstr.Properties.VariableNames{1});
 end
 

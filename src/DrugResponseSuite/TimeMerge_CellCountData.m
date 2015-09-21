@@ -53,9 +53,9 @@ end
 
 
 for iP = 1:height(t_plates)
-    
+
     subt = t_processed(eqtable(t_processed, t_plates(iP,:)),:);
-    
+
     Times = unique(subt.Time);
     Time = NaN*subt.Time;
     % find the best plate grouping
@@ -64,7 +64,7 @@ for iP = 1:height(t_plates)
         mindiff(i) = sum(sum(diff(reshape(Times(i:(i+...
             NTimePlates*floor((length(Times)-i)/NTimePlates)-1)),NTimePlates,[]))));
     end
-    
+
     for iT = 0:ceil(length(Times)/NTimePlates)
         t = Times(max(1,argmin(mindiff)+NTimePlates*(iT-1)):...
             min(end,argmin(mindiff)+NTimePlates*iT-1));
@@ -72,7 +72,7 @@ for iP = 1:height(t_plates)
     end
     Time = round(Time,2);
     temp = [table(Time) subt(:,setdiff(varnames(subt),'Time','stable'))];
-    
+
     otherkeys = setdiff(varnames(temp), [cond_keys plate_keys], 'stable');
     otherkeys = otherkeys(all(cellfun(@(x) (isnumeric(x) | ischar(x) | iscategorical(x)) & length(x)==1, ...
         table2cell(temp(1:min(10,end),otherkeys)))));

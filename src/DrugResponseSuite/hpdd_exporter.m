@@ -86,7 +86,7 @@ for design_num = 1:length(Designs)
             'Design %d is not a standard plate size', design_num);
         throw(me);
     end
-    
+
     % Verify that all drug layout have the standard format
     for iD = 1:length(Designs(design_num).Drugs)
         if ~all(size(Designs(design_num).Drugs(iD).layout) == Designs(design_num).plate_dims)
@@ -95,7 +95,7 @@ for design_num = 1:length(Designs)
             throw(me);
         end
     end
-    
+
     % Verify that backfill maps are 2n x 3n (24/96/384/...) wells if it
     % exists. If we have to support different plate types in the future
     % this would need to be changed.
@@ -151,19 +151,19 @@ end
 
 plate_cnt = 0;
 for plate_num = 1:height(t_trt_plates)
-    
+
     % Use barcode table's DesignNumber column as index into Design array.
     cur_design = Designs(t_trt_plates.DesignNumber(plate_num));
     if ~isfield(cur_design,'Drugs') || isempty(cur_design.Drugs) || ...
             all(reshape([cur_design.Drugs.layout],[],1)==0)
         warnprintf('Plate  %s  is ignored because no drug treatment was found', ...
-            char(t_trt_plates.Barcode(plate_num)))        
+            char(t_trt_plates.Barcode(plate_num)))
         continue
     end
     % if plates are skipped, the plate number in the hpdd file is not the
     % same as plate_num
     plate_cnt = plate_cnt + 1;
-    
+
     plate_name = t_trt_plates.Barcode(plate_num);
     if isvariable(t_trt_plates, 'PlateShaking')
         PlateShaking = t_trt_plates.PlateShaking(plate_num);
@@ -172,11 +172,11 @@ for plate_num = 1:height(t_trt_plates)
     end
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
-    
+
     % creat the plate
     plate = document.createElement('Plate');
     plates.appendChild(plate);
-    
+
     create_text_children(plate, ...
         {
         'PlateType'   sprintf('Default%i', numel(cur_design.Drugs(1).layout));
@@ -215,7 +215,7 @@ for plate_num = 1:height(t_trt_plates)
             if well.hasChildNodes
                 wells.appendChild(well);
             end
-            
+
             % Create backfill well element. If treated_wells is not present we
             % apply backfill to all wells. If it is present, we look up the
             % current well address in it to determine whether to apply backfill.
@@ -278,5 +278,3 @@ else
     T = 'False';
 end
 end
-
-

@@ -59,31 +59,31 @@ for iD = 1:size(ComboDidx,1)
     Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
     Drug1 = Drugs(ComboDidx(iD,1)).DrugName;
     Drug1CIdx = find(strcmp(t_CL.Properties.VariableNames, Drug1));
-    
+
     Drug1Idx = table2array(t_CL(:,Drug1CIdx))~=0 ;
-    
+
     Doses2 = unique([0 Drugs(ComboDidx(iD,2)).ComboDoses]);
     Drug2 = Drugs(ComboDidx(iD,2)).DrugName;
-    
+
     Drug2CIdx = find(strcmp(t_CL.Properties.VariableNames, Drug2));
-    
-    
+
+
     ComboIdx = table2array(t_CL(:,Drug1CIdx))~=0 & ...
         table2array(t_CL(:,Drug2CIdx))~=0;
-    
+
     %     Drug1fit = t_Results.ICfit{ComboDidx(iD,1)};
     %     Drug2fit = t_Results.ICfit{ComboDidx(iD,2)};
 
     Drug1fit = @(x) spline([0 t_Results.Doses{ComboDidx(iD,1)}], ...
         [1 smooth(t_Results.Rel_CellCnt{ComboDidx(iD,1)},'lowess')'], x);
-    
+
     Drug2fit = @(x) spline([0 t_Results.Doses{ComboDidx(iD,2)}], ...
         [1 smooth(t_Results.Rel_CellCnt{ComboDidx(iD,2)},'lowess')'], x);
-    
+
     CellCnt = NaN(length(Doses1), length(Doses2), max(t_CL.Replicate));
-    
+
     AddRelcnt = NaN(length(Doses1), length(Doses2));
-    
+
     for iDo1 = 1:length(Doses1)
         for iDo2 = 1:length(Doses2)
             if iDo1 == 1 && iDo2 == 1
@@ -112,20 +112,20 @@ for iD = 1:size(ComboDidx,1)
             end
         end
     end
-    
+
     Relcnt = nanmean(CellCnt./repmat(reshape(meanCtrl,1,1,[]),...
         length(Doses1),length(Doses2)),3);
-    
+
     for iF=[1 3]
         figure(fignum+iF)
         get_newaxes([.08+.1/Ncols+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
             .06+.12/Nrows+.85*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
             -.06+.85/Ncols -.09+.8/Nrows])
-        
+
         if iF==1 % cell count
             clims = [.1 1.2];
             imagesc(Relcnt,clims)
-            
+
             if DoGI50
                 c0 = SeededNumber/mean(meanCtrl);
                 l1 = clims(2)-c0;
@@ -143,29 +143,29 @@ for iD = 1:size(ComboDidx,1)
             else
                 colormap(Plotting_parameters.cmapWP)
             end
-            
-            
+
+
         elseif iF==2 % different predicted
             delta = -(min(Relcnt,1)-AddRelcnt);
             delta(abs(delta)<.05) = 0;
-            
+
             imagesc(delta,[-.301 .301])
-            
+
             colormap(Plotting_parameters.cmapBR)
-        else    % Bliss combination index 
+        else    % Bliss combination index
             I1 = 1-AddRelcnt(1,:);
             I2 = 1-AddRelcnt(:,1);
             I12= 1-Relcnt;
             Bliss = I12-(ones(size(I2))*I1+I2*ones(size(I1))-I2*I1);
             Bliss(1,:) = 0;
             Bliss(:,1) = 0;
-            
+
             imagesc(Bliss,[-.301 .301])
-            
+
             colormap(Plotting_parameters.cmapBR)
-            
+
         end
-        if iD==1            
+        if iD==1
             hc = colorbar('location','northoutside');
             set(hc,'position',[.4 .93-.1/Nrows .2 .02],'fontsize',8)
             if iF==1
@@ -176,16 +176,11 @@ for iD = 1:size(ComboDidx,1)
                 xlabel(hc,[CellLine ': Delta Bliss (red=synergy)'],'fontsize',10,'fontweight','bold')
             end
         end
-        
+
         set(gca,'xtick',2:2:length(Doses2),'xticklabel',.1*round(10*log10(Doses2(2:2:end))), ...
             'ytick',2:length(Doses1),'yticklabel',.1*round(10*log10(Doses1(2:end))),'fontsize',8)
         ylabel([Drug1 ' log_{10}(\muM)'])
         xlabel([Drug2 ' log_{10}(\muM)'])
     end
-    
+
 end
-
-
-
-
-

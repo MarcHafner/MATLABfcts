@@ -1,7 +1,7 @@
 function score = MCCscoring (ConfMx)
 % score = MCCscoring (ConfMx)
-%   ConfMx = 
-%       [  TP    FP 
+%   ConfMx =
+%       [  TP    FP
 %          FN    TN ];
 %
 

@@ -18,4 +18,3 @@ if noColRow
     t_data.Row = [];
     t_data.Column = [];
 end
-    

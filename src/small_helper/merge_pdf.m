@@ -12,7 +12,7 @@ function merge_pdf(inputfiles, outputfile, del, args)
 %
 %   WARNING: overwritting the output file without notice
 %
-%   
+%
 %
 
 if ~exist('args','var')
@@ -37,7 +37,7 @@ cmd = sprintf('pdftk %s %s output %s', inputfiles, args, outputfile);
 assert(status==0, 'pdftk was not successful:\n\n%s', output)
 
 if exist('del','var') && del
-    n = dir(inputfiles); 
+    n = dir(inputfiles);
     [~,f,e] = fileparts(outputfile);
     n = setdiff({n.name}, [f e]);
     n = strcat([fileparts(inputfiles) filesep], n);

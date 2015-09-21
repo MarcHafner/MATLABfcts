@@ -61,30 +61,30 @@ for iP=1:length(Plates)
         catch
             fieldname = ReducName( ReplaceName(fieldname,['-/\:?!,.' 250:1e3], '_'), ' ');
         end
-        
+
         temp_data = tsv2cell(fullfile(folder, PlateFiles{iF}));   % Read the file
         Nheader = find(strcmp(temp_data(:,1), 'Date Time')); % get the position of data
         assert(length(Nheader)==1)
         assert(strcmp(temp_data(Nheader,2), 'Elapsed')) % check the headers
         assert(ismember(temp_data{Nheader,3}(1),'A':'Q') & ...
             ismember(temp_data{Nheader,3}(2),'0':'9')) % check the headers
-        
+
         Date = cellfun(@datenum, temp_data((Nheader+1):end,1));
         Time = cellfun(@str2double, temp_data((Nheader+1):end,2));
         Wells = CorrectWellsTo0xY(temp_data(Nheader,3:end));
         Data = cellfun(@str2double,temp_data((Nheader+1):end,3:end));
-        
+
         plate_data{iF} = table(repmat(Date, length(Wells),1), repmat(Time, length(Wells),1), ...
             reshape(repmat(Wells,length(Date),1),[],1), Data(:), ...
             'VariableNames', [DefaultFields fieldname]);
-        
+
         plate_data{iF} = TableToCategorical(plate_data{iF});
-        
+
     end
-    
+
     if length(PlateFiles)>1
         assert(length(unique(cellfun(@height,plate_data)))==1)
-        
+
         for iF = 2:length(PlateFiles)
             plate_data{1} = innerjoin(plate_data{1}, plate_data{iF}, 'keys', ...
                 DefaultFields);
@@ -92,7 +92,7 @@ for iP=1:length(Plates)
         assert(height(plate_data{1}) == height(plate_data{2}))
         assert(width(plate_data{1}) == (length(DefaultFields)+length(PlateFiles)))
     end
-    
+
     if iP==1
         ImportedFields = setdiff(varnames(plate_data{1}),DefaultFields);
     else
@@ -104,7 +104,7 @@ for iP=1:length(Plates)
             error('Mismatch between import fields and fields for %s', Plates{iP})
         end
     end
-    
+
     t_raw = [t_raw; [table(repmat(Plates(iP),height(plate_data{1}),1), ...
         'variablenames', {'Barcode'}), plate_data{1}]];
 end

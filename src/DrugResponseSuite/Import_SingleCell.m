@@ -68,18 +68,18 @@ output_cnt = 0;
 fprintf('\nReading all conditions (%i total):\n', height(t_processed));
 for iPW = 1:height(t_processed)
     loop_waitbar(iPW, height(t_processed))
-    
+
     folderlist = dir(folder);
     allfolder = setdiff({folderlist([folderlist.isdir]==1).name}, {'.' '..'});
-    
+
     Plate = char(t_processed.Barcode(iPW));
     Well = char(t_processed.Well(iPW));
-    
+
     if Well(2)=='0', Well = Well([1 3]); end
-    
-    
+
+
     subfolder = [folder filesep allfolder{regexpcell(allfolder, Plate)>0}];
-    
+
     if exist('filefilter','var')
         files = dir([subfolder filesep '*' filefilter '*.t*']); % for tsv or txt files
     else
@@ -87,33 +87,33 @@ for iPW = 1:height(t_processed)
     end
     files = {files([files.isdir]==0).name};
     files = files(regexpcell(files, sprintf('result.%s\\[', Well))>0);
-    
+
     if isvariable(t_processed,'Date') && timecourse
         files = files(regexpcell(files, ...
             datestr(t_processed.Date(iPW),'yyyy-mm-ddTHHMMSS'))==1);
     end
-    
-    
+
+
     if isempty(files)
         warnprintf(['Missing file for: ' Plate ' ' Well]);
         continue
     end
-    
+
     files_WI = files(regexpcell(files, 'Whole Image')>0);
     files = files(regexpcell(files, 'Whole Image')==0);
     if ~timecourse || isvariable(t_processed,'Date')
         assert(length(files)==1, ['Too many files: ' strjoin(files,' - ')])
     end
-    
+
     for it = 1:length(files)
         date = regexp(files{it},'^([0-9\-]*)T','tokens');
         time = regexp(files{it}, '^[0-9\-]*T([0-9]*)\-', 'tokens');
         Date = datenum([date{1}{1} '-' time{1}{1}], 'yyyy-mm-dd-HHMMSS');
-        
+
         t_ss = tsv2table([subfolder filesep files{it}]);
-        
+
         output_cnt = output_cnt+1;
-        
+
         if isvariable(t_processed,'Date')
             t_out(output_cnt,:) = t_processed(iPW,:);
         else
@@ -125,7 +125,7 @@ for iPW = 1:height(t_processed)
             SingleCell(output_cnt).Background = t_bkgrd(:,['Field' ...
                 bck_fields(regexpcell(bck_fields, '[0-9]*Mean')>0)]);
         end
-        
+
         SingleCell(output_cnt).Barcode = Plate;
         SingleCell(output_cnt).Well = Well;
         SingleCell(output_cnt).Date = Date;
@@ -139,8 +139,7 @@ for iPW = 1:height(t_processed)
             SingleCell(output_cnt).(fields{i}) = t_ss.(fields{i});
         end
     end
-    
+
 end
 
 fprintf('\n');
-

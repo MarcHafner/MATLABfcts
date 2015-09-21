@@ -7,21 +7,21 @@ get_newfigure(9999)
 filtered_data = compiled_data;
 lD = height(compiled_data.ExpKey);
 for iE = 1:lD
-    
+
     subplot(floor(sqrt(lD)),ceil(lD/floor(sqrt(lD))),iE)
-    
+
     Goodidx = compiled_data.Fate(iE).Surviving | ...
         ( ((compiled_data.Fate(iE).MompTime-compiled_data.Fate(iE).FRETMompTime)<cutoffs(2) & ...
         (compiled_data.Fate(iE).MompTime-compiled_data.Fate(iE).FRETMompTime)>cutoffs(1))  & ...
         (compiled_data.Fate(iE).MompTime>100 | compiled_data.fits(iE).k>0)) ;
-    
+
     hist(compiled_data.Fate(iE).MompTime-compiled_data.Fate(iE).FRETMompTime,...
         (cutoffs(1)-40):10:(cutoffs(2)+40));
     hold on
     plot(cutoffs([1 1]), ylim, '-r')
     plot(cutoffs([2 2]), ylim, '-r')
     xlim([(cutoffs(1)-50) (cutoffs(2)+50)])
-    
+
     nCells = length(compiled_data.fits(iE).r2);
     fprintf('%i (%.1f%%) cells selected from %i (%s ; %s)\n', sum(Goodidx), ...
         100*(sum(Goodidx)/length(Goodidx)), length(Goodidx), ...
@@ -30,9 +30,9 @@ for iE = 1:lD
         warning('Less than 80%% of cells selected for %s',...
             compiled_data.ExpKey.Legend{iE})
     end
-    
+
     filtered_data.MOMPfilter{iE} = Goodidx;
-    
+
     for f = fieldnames(compiled_data)'
         if isstruct(filtered_data.(f{:}))
         for f2 = fieldnames(filtered_data.(f{:})(iE))'
@@ -55,5 +55,5 @@ for iE = 1:lD
             filtered_data.(f{:}){iE} = filtered_data.(f{:}){iE}(Goodidx);
         end
     end
-    
+
 end

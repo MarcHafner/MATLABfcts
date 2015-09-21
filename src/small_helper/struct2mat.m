@@ -8,7 +8,7 @@ if isnumeric(s(1).(field))
         end
     end
 else
-    
+
     mat = cell(size(s));
     for i=1:numel(s)
         if ~isempty(s(i).(field))

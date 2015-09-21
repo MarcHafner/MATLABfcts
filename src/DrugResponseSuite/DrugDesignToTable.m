@@ -58,7 +58,7 @@ end
 Well = ConvertRowColToWells(rows, cols);
 
 % get all drugs and match the order
-if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs) 
+if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs)
     DrugNames = {};
 else
     DrugNames = {Design1.Drugs.DrugName};
@@ -84,7 +84,7 @@ else
     PertNames = {};
 end
 
-if isfield(Design1.Drugs,'HMSLid') & ~isempty(Design1.Drugs) 
+if isfield(Design1.Drugs,'HMSLid') & ~isempty(Design1.Drugs)
     HMSLids = {Design1.Drugs.HMSLid};
     t_HMSLids = table([DrugNames {'-'}]', [HMSLids(order) {'-'}]', ...
         'VariableNames', {'DrugName' 'HMSLid'});
@@ -99,7 +99,7 @@ end
 %%
 
 % determine the number of Drug Columns
-if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs) 
+if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs)
     Ndrugs = 1;
     DrugConc = zeros([Design1.plate_dims 0]);
 else
@@ -131,14 +131,14 @@ end
 for iW = 1:height(t_design)
     Didx = find(DrugConc(rows(iW), cols(iW),:));
     if isempty(Didx), continue, end
-    
+
     for iD = 1:length(Didx)
         t_design.(sprintf('DrugName%i', iD(iD>1))){iW} = DrugNames{Didx(iD)};
         t_design.(sprintf('Conc%i', iD(iD>1)))(iW) =  DrugConc(rows(iW), cols(iW),Didx(iD));
     end
 end
 
-% add the HMSLid 
+% add the HMSLid
 for iD = 1:Ndrugs
     temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, ...
         'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
@@ -154,7 +154,7 @@ t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid';
 for iP = 1:length(PertNames)
     Pertvals = Design1.Perturbations(strcmp({Design1.Perturbations.Name}, ...
         PertNames{iP})).layout(sub2ind(Design1.plate_dims, rows, cols));
-    
+
     t_design = [t_design, table(Pertvals, 'VariableNames', PertNames(iP))];
 end
 
@@ -166,4 +166,3 @@ if ~isvariable(t_design, 'pert_type')
 end
 
 t_design = TableToCategorical(t_design, 0);
-

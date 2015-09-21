@@ -8,16 +8,16 @@ if length(x)>1
         idx = find(length(x) == size(y),1,'first');
         y = permute(y,[ idx setdiff(1:length(size(y)),idx)]);
     end
-    
+
     if ~exist('ybins','var') || isempty(ybins)
         ydiff = (max(y(:))-min(y(:)))/20;
         ybins = (min(y(:))-ydiff*3):( ydiff ):(max(y(:))+ydiff*3);
     end
-    
+
     if ~exist('width','var') || isempty(width)
         width = .7;
     end
-    
+
     ish = ishold;
     hold on
     for i=1:length(x)

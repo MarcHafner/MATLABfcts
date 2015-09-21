@@ -38,19 +38,19 @@ end
 
 for iP = 1:height(t_plate_keys)
     subt_conditions = t_conditions(t_conditions.Barcode==t_plate_keys.Barcode{iP},:);
-    
+
     for iR = 1:length(cycle_data)
         fprintf('\n---------------------\n%s: %s\n-------------------\n',...
             t_plate_keys.Barcode{iP}, cycle_data{iR});
-        
+
         Abs = t_Abs(strcmp(t_Abs.Barcode,t_plate_keys.Barcode(iP)), ...
             strfindcell(varnames(t_Abs), cycle_data{iR})==1);
         channel = cellstr2mat(regexpcelltokens(varnames(Abs), 'cycle[0-9]_([0-9]*)'));
         channel_idx = ~strcmp([Abs{1,:}], '-') & ~isempty([Abs{1,:}]);
         channel = channel(channel_idx);
         Abs = [Abs{1,channel_idx}];
-        
-        
+
+
         SelectedFields = {};
         FieldName = {};
         for iF = 1:length(defaultFields)
@@ -66,10 +66,10 @@ for iP = 1:height(t_plate_keys)
         end
         FieldName = matlab.internal.tableUtils.makeValidName(FieldName, 'silent');
         SelectedFields = matlab.internal.tableUtils.makeValidName(SelectedFields, 'silent');
-        
+
         temp_SingleCelldata = Import_SingleCell(subt_conditions, ...
             [folder subfolder], SelectedFields, false, t_plate_keys.(cycle_data{iR}){iP});
-        
+
         for iF = 1:length(temp_SingleCelldata)
             for iC = 1:length(channel)
                 temp_SingleCelldata(iF).Background.Properties.VariableNames = ...
@@ -78,12 +78,12 @@ for iP = 1:height(t_plate_keys)
                     num2str(channel(iC)), ['_' Abs{iC} '_' cycle_data{iR}]), 'silent');
             end
         end
-        
+
         for iF = 1:length(FieldName)
             [temp_SingleCelldata.(FieldName{iF})] = temp_SingleCelldata.(SelectedFields{iF});
             temp_SingleCelldata = rmfield(temp_SingleCelldata, SelectedFields{iF});
         end
-        
+
         if iR==1
             Allcycles = temp_SingleCelldata;
         else
@@ -100,7 +100,7 @@ for iP = 1:height(t_plate_keys)
             end
         end
     end
-    
+
     if iP==1
         SingleCelldata = Allcycles;
         t_SingleCelldata = subt_conditions;

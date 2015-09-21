@@ -24,7 +24,7 @@ function t_data = Read_ColumbusData(filename, barcode_file)
 t_raw = tsv2table(filename);
 
 
-if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warning('wells with missing fields: %i', ...
         unique(t_raw.NumberOfAnalyzedFields))
@@ -44,7 +44,7 @@ t_raw.Well(well_idx) = strcat(cellcell2cellstr(regexp(t_raw.Well(well_idx),'^(\w
     '0',cellcell2cellstr(regexp(t_raw.Well(well_idx),'^\w(\d)$','tokens')));
 %%
 
-t_barcode = tsv2table(barcode_file); 
+t_barcode = tsv2table(barcode_file);
 
 assert(length(unique(t_raw.Barcode))>=height(t_barcode), ...
     'Found %i plates, but expected %i plates; missing %s', ...
@@ -52,7 +52,7 @@ assert(length(unique(t_raw.Barcode))>=height(t_barcode), ...
     strjoin(setdiff(t_barcode.Barcode,unique(t_raw.Barcode))',' ') );
 
 url = regexp(t_raw.URL,'/','split');
-PlateID = vertcat(url{:}); 
+PlateID = vertcat(url{:});
 
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
@@ -66,12 +66,12 @@ cnt = 0;
 otherVariables = setdiff(varnames(t_barcode), {'Time' 'CellLine' 'Barcode' ...
             'Treatmentfile' 'DesignNumber' 'ExpNumber'});
 for iBC = 1:height(t_barcode)
-    
+
     idx = find(strcmp(t_raw.Barcode, t_barcode.Barcode{iBC}));
     assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
         length(unique(PlateID(idx))))
     assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
-    
+
     CellLine(idx) = t_barcode.CellLine(iBC);
     Barcode(idx) = t_barcode.Barcode(iBC);
     Treatmentfile(idx) = t_barcode.Treatmentfile(iBC);
@@ -85,13 +85,13 @@ for iBC = 1:height(t_barcode)
     end
     Untrt(idx) = strcmp(t_barcode.Treatmentfile(iBC),'-');
     Time(idx) = t_barcode.Time(iBC);
-    
+
     for i = 1:length(otherVariables)
         eval([otherVariables{i} '(idx) = t_barcode.' otherVariables{i} '(iBC);'])
     end
-    
+
     cnt = cnt+1;
-    
+
 end
 
 for i = 1:length(otherVariables)
@@ -108,12 +108,12 @@ if cnt<length(unique(PlateID))
     Treatmentfile = Treatmentfile(Usedidx);
     CellLine = CellLine(Usedidx);
     DesignNumber = DesignNumber(Usedidx);
-    Time = Time(Usedidx);  
+    Time = Time(Usedidx);
     for i = 1:length(otherVariables)
         eval([otherVariables{i} ' = ' otherVariables{i} '(Usedidx);'])
-    end  
+    end
 else
-    
+
     Usedidx = 1:height(t_raw);
 end
 

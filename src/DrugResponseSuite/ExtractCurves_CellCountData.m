@@ -61,27 +61,27 @@ for ik = 1:height(t_keys)
     %%
     subt = sortrows(t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:),'Conc');
 %     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
-    
+
     if height(subt)<4
         warnprintf(['Not enough data point for ' strjoin(table2cellstr(t_keys(ik,:),0))])
         continue
     end
-    
+
     if all(subt.Conc<1e-3) || all(subt.Conc>1e3)
         warnprintf('Concentrations are expected in uM; fitopt have constraints')
     end
-    
+
     t_temp = t_keys(ik,:);
-    
+
     if ismember('RelCellCnt', subt.Properties.VariableNames);
         [IC50, Hill, Einf, Emax, Area, r2, EC50, fit] = ...
             ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
-        
+
         t_temp = [t_temp table(IC50, Hill, Einf, Emax, Area, r2, EC50) ...
             table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
             {'fit' 'Conc' 'RelCellCnt'})];
     end
-    
+
     if ismember('RelGrowth', subt.Properties.VariableNames);
         if all(ismember({'Day0Cnt' 'Ctrlcount'}, subt.Properties.VariableNames));
             fitopt2.ranges = [
@@ -98,7 +98,7 @@ for ik = 1:height(t_keys)
         t_temp = [t_temp table(GI50, GIinf, GImax, GIArea, GI_r2) ...
             table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
     end
-    
+
     if ismember('nRelGrowth', subt.Properties.VariableNames);
         [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
             ICcurve_fit(subt.Conc, subt.nRelGrowth, 'nGI50', fitopt);

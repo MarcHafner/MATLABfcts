@@ -18,7 +18,7 @@ function [t_mean, t_processed] = Process_CellCountData(t_data, plate_inkeys, con
 if exist('plate_inkeys','var')
     plate_keys = unique([{'CellLine' 'Time'} plate_inkeys]);
 else
-    plate_keys = {'CellLine' 'Time'}; 
+    plate_keys = {'CellLine' 'Time'};
     plate_inkeys = {};
 end
 if exist('cond_inkeys','var')
@@ -47,7 +47,7 @@ t_mean = table;
 for iP = 1:height(t_plate)
     %
     % find the cell count at day 0
-    if EvaluateGI        
+    if EvaluateGI
         temp = t_plate(iP,setdiff(plate_keys, {'Treatmentfile'}, 'stable'));
         temp.Time = 0;
         Day0Cnt = trimmean( t_data.Cellcount(eqtable(temp, ...
@@ -55,16 +55,16 @@ for iP = 1:height(t_plate)
     else
         Day0Cnt = NaN;
     end
-    
+
     t_conditions = t_data(eqtable(t_plate(iP,:), t_data(:,plate_keys)) , :);
-    
+
     % found the control for treated plates (ctl_vehicle)
     t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
     t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), 'keyvars', ...
         {'DesignNumber'}, 'valvars', {'Cellcount'});
     t_ctrl.Properties.VariableNames{'Cellcount'} = 'Ctrlcount';
     t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
-        
+
     % report the ctrl values in the table
     t_conditions = innerjoin(t_conditions(ismember(t_conditions.pert_type, ...
         {'trt_cp' 'trt_poscon'}),:), t_ctrl);
@@ -73,11 +73,11 @@ for iP = 1:height(t_plate)
         (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt)], ...
         'variablenames', {'RelCellCnt' 'RelGrowth'})];
     t_processed = [t_processed; t_conditions];
-    
-    
+
+
     %%%%%%%%% maybe move that part out of the loop if there are
     %%%%%%%%% corresponding replicates from different plates
-    
+
     % collapse the replicates
     temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys ], ...
         'valvars', {'RelCellCnt' 'RelGrowth'});
@@ -86,9 +86,8 @@ for iP = 1:height(t_plate)
         'Untrt' 'Cellcount' 'date' 'Row' 'Column' 'Well' 'Treatmentfile'})));
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
-    
+
     t_mean = [t_mean; temp];
 end
 
 t_mean = sortrows(t_mean, [plate_keys cond_keys]);
-    

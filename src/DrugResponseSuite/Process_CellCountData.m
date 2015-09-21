@@ -82,7 +82,7 @@ for iP = 1:height(t_plate)
         if any(idx)
             Day0Cnt = trimmean(t_annotated.Cellcount(idx), 50);
         else
-            if ~DisplayTC 
+            if ~DisplayTC
                 disp('Extrapolating Day0 from time course')
                 DisplayTC = true;
             end
@@ -104,15 +104,15 @@ for iP = 1:height(t_plate)
     else
         Day0Cnt = NaN;
     end
-    
+
     Relvars = {'RelCellCnt' 'RelGrowth' 'nRelGrowth'};
     t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
-    
+
     % found the control for treated plates (ctl_vehicle)
     t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
     assert(height(t_ctrl)>0, 'No control found for %s --> check ''pert_type''', ...
         strjoin(strcat(table2cellstr( t_plate(iP,:), 0)), '|'))
-    
+
     t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), 'keyvars', ...
         {'DesignNumber'}, 'valvars', [{'Cellcount'} numericfields]);
     t_ctrl.Properties.VariableNames{'Cellcount'} = 'Ctrlcount';
@@ -120,7 +120,7 @@ for iP = 1:height(t_plate)
         t_ctrl.Properties.VariableNames{numericfields{i}} = ['Ctrl_' numericfields{i}];
     end
     t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
-    
+
     % report the ctrl values in the table
     t_conditions = innerjoin(t_conditions, t_ctrl);
     % evaluate the relative cell count/growth
@@ -128,16 +128,15 @@ for iP = 1:height(t_plate)
         (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt) ...
         2.^(log2(t_conditions.Cellcount./t_conditions.Day0Cnt)./log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt))-1], ...
         'variablenames', Relvars)];
-    
-    
+
+
     if ~EvaluateGI
         t_conditions.RelGrowth = [];
         t_conditions.nRelGrowth = [];
         t_conditions.Day0Cnt = [];
         Relvars = {'RelCellCnt'};
     end
-    
-    t_processed = [t_processed; t_conditions];
-    
-end
 
+    t_processed = [t_processed; t_conditions];
+
+end

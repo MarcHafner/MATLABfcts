@@ -25,7 +25,7 @@ for iF = ['Barcode' 'Well' 'DrugName' 'Conc' 'CellLine' ...
     end
 end
 trace_vars = unique(trace_vars);
-   
+
 if exist('plate_inkeys','var') && ~isempty(cond_inkeys)
     plate_keys = unique([{'CellLine' 'Barcode' 'Time'} cond_inkeys]);
 else
@@ -40,7 +40,7 @@ t_rate = table();
 for it = 1:height(t_location)
     % get all time points for each well
     t_temp = sortrows(t_data(eqtable(t_data(:,trace_vars), t_location(it,:)),:),'Time');
-    
+
     t_temp = [t_temp(1,:); t_temp];
     t_temp.Time(1) = 0;
     if isvariable(t_temp, 'Day0Cnt')
@@ -48,7 +48,7 @@ for it = 1:height(t_location)
     else
         t_temp.Cellcount(1) = t_temp.Cellcount(2);
     end
-        
+
     Time = mean([t_temp.Time(1:(end-1)) t_temp.Time(2:end)],2);
     Cellcount =  mean([t_temp.Cellcount(1:(end-1)) t_temp.Cellcount(2:end)],2);
     dx = diff(t_temp.Cellcount);
@@ -79,5 +79,3 @@ for i = 1:height(t_ctrl)
 end
 t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
     max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
-
-

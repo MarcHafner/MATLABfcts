@@ -18,4 +18,3 @@ elseif iscategorical(anything)
 else
     str=anything;
 end
-    

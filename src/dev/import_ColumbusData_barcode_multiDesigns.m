@@ -9,7 +9,7 @@
 %                       result file (output from Columbus)
 %             FilesLocation.Barcode_table = table with the following
 %                       columns:  Barcode   CellLine    Designfile  Replicate  Untrt   Day0
-%                   
+%
 %                       column value examples:
 %                           Barcode:    MN20140509001
 %                           CellLine:   MDAMB231
@@ -22,7 +22,7 @@
 %             FilesLocation.OutputFile = 'Results_20140310';
 %             [needed in using 'savefile']
 %                       File name for saving the results
-%   
+%
 %  savefile = save results in a file (need FilesLocation.OutputFile)
 %
 
@@ -32,7 +32,7 @@ function [t_CL, Drugs, CellLines] = import_ColumbusData_barcode(FilesLocation, s
 if ~exist('savefile','var'),
     savefile = 0;
 end
-    
+
 fields = {'folder' 'data_file' 'Barcode_table' 'OutputFile'};
 Mandatory = [1   1   1  savefile];
 
@@ -52,7 +52,7 @@ assert(all(ismember({'Barcode' 'CellLine' 'DesignFile'}, ...
 
 t_raw = readtable([folder data_file],'delimiter','\t');
 
-if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warning('wells with missing fields: %i', ...
         unique(t_raw.NumberOfAnalyzedFields))
@@ -71,7 +71,7 @@ assert(length(unique(t_raw.Barcode))>=height(Barcode_table), ...
     length(unique(t_raw.Barcode)), height(Barcode_table));
 
 url = regexp(t_raw.URL,'/','split');
-PlateID = vertcat(url{:}); 
+PlateID = vertcat(url{:});
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
 CellLine = cell(height(t_raw),1);
@@ -83,28 +83,28 @@ Day0 = zeros(height(t_raw),1);
 
 cnt = 0;
 for iBC = 1:height(Barcode_table)
-    
+
     idx = find(strcmp(t_raw.Barcode, Barcode_table.Barcode{iBC}));
     assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
         length(unique(PlateID(idx))))
     assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
-    
+
     CellLine(idx) = Barcode_table.CellLine(iBC);
     Barcodes(idx) = Barcode_table.Barcode(iBC);
     DesignSet(idx) = Barcode_table.DesignSet(iBC);
     Replicate(idx) = Barcode_table.Replicate(iBC);
-    
+
     if ismember('Untrt', Barcode_table.Properties.VariableNames)
         Untrt(idx) = Barcode_table.Untrt(iBC);
     end
-    
+
     if ismember('Day0',Barcode_table.Properties.VariableNames)
         Day0(idx) = Barcode_table.Day0(iBC);
     end
-    
+
     assert(all(Replicate(idx)>0 | Untrt(idx)>0 | Day0(idx)>0))
     cnt = cnt+1;
-    
+
 end
 assert(cnt<=length(unique(PlateID)))
 if cnt<length(unique(PlateID))
@@ -131,21 +131,21 @@ Drugs = t_CL;
 DrugsNames = t_CL;
 
 for iCL=1:length(CellLines)
-    
+
     t_CL{iCL} = t_data(t_data.CellLine==CellLines{iCL},:);
-    
+
     Designs = setdiff(unique(Barcode_table.DesignSet(...
         strcmp(Barcode_table.CellLine,CellLines{iCL}))),'');
-    
+
     DrugsNames{iCL} = {};
     Drugs{iCL} = [];
     for iDe=1:length(Designs)
         design_file = Barcode_table.DesignFile(strcmp(Barcode_table.CellLine,...
             CellLines(iCL)) & Barcode_table.Replicate>0 & strcmp(Barcode_table.DesignSet, Designs{iDe}));
         load([folder design_file{1}])
-        
+
         DrugsNames{iCL} = [ DrugsNames{iCL} ; {drugs_struct.name}'];
-        
+
         if isfield(drugs_struct,'Primary')
             temp = struct('DrugName',MATLABsafename(ReplaceName({drugs_struct.name})), ...
                 'Primary',{drugs_struct.Primary}, ...
@@ -161,26 +161,26 @@ for iCL=1:length(CellLines)
         end
         Drugs{iCL} = [Drugs{iCL} temp];
     end
-    
+
     DrugDoses = zeros(height(t_CL{iCL}),length(DrugsNames{iCL}));
     for iDe=1:length(Designs)
         t_CL{iCL} = sortrows(t_CL{iCL},{'DesignSet' 'Replicate' 'Column' 'Row'});
         for iR = setdiff(unique(t_data.Replicate(strcmp(t_data.DesignSet, Designs{iDe}))), 0)'
-            
+
             design_file = Barcode_table.DesignFile{strcmp(Barcode_table.CellLine,...
                 char(CellLines(iCL))) & Barcode_table.Replicate==iR & strcmp(Barcode_table.DesignSet, Designs{iDe})};
-            
+
             load([folder design_file ])
             temp_DrugNames = {drugs_struct.name};
             assert(all(ismember(temp_DrugNames, DrugsNames{iCL})))
-            
+
             for iD=1:length(temp_DrugNames)
                 DrugDoses(t_CL{iCL}.Replicate==iR & strcmp(t_CL{iCL}.DesignSet, Designs{iDe}),...
                     strcmp(temp_DrugNames{iD},DrugsNames{iCL})) = drugs_struct(iD).layout(:);
             end
         end
     end
-    
+
     CtrlIdx = all(DrugDoses==0,2) & ~t_CL{iCL}.Day0;
     for iDe=1:length(Designs)
         for iR = setdiff(unique(t_CL{iCL}.Replicate), 0)'
@@ -196,7 +196,7 @@ for iCL=1:length(CellLines)
     end
     t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses CtrlIdx], ...
         'VariableNames',{Drugs{iCL}.DrugName 'Ctrl'})];
-    
+
     t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Untrt' ...
         'Day0' 'Ctrl'});
 end

@@ -24,7 +24,7 @@ function [perm,T] = dendroperm(Z)
 %      Y = pdist(X,'cityblock');
 %      Z = linkage(Y,'average');
 %      [H, T] = dendrogram(Z);
-%   
+%
 %      rng('default')
 %      X=rand(10,3);
 %      Z=linkage(X,'ave');
@@ -40,7 +40,7 @@ function [perm,T] = dendroperm(Z)
 numLeaves = size(Z,1)+1; %the number of observations
 
 p = 0;
-    
+
 color = false;
 orientation = 't'; %default top
 obslabels = [];
@@ -52,7 +52,7 @@ horz = false;
 % For each node currently labeled numLeaves+k, replace its index by
 % min(i,j) where i and j are the nodes under node numLeaves+k.
 Z = transz(Z);
-T = (1:numLeaves)'; 
+T = (1:numLeaves)';
 
 
 
@@ -65,11 +65,11 @@ Y = zeros(numLeaves,1);
     % arrange Z into W so that there will be no crossing in the dendrogram.
     W = zeros(size(Z));
     W(1,:) = Z(1,:);
-    
+
     nsw = zeros(numLeaves,1); rsw = nsw;
     nsw(Z(1,1:2)) = 1; rsw(1) = 1;
     k = 2; s = 2;
-    
+
     while (k < numLeaves)
         i = s;
         while rsw(i) || ~any(nsw(Z(i,1:2)))
@@ -78,7 +78,7 @@ Y = zeros(numLeaves,1);
             end
             i = i+1;
         end
-        
+
         W(k,:) = Z(i,:);
         nsw(Z(i,1:2)) = 1;
         rsw(i) = 1;
@@ -87,7 +87,7 @@ Y = zeros(numLeaves,1);
         end
         k = k+1;
     end
-    
+
     % initialize X based on W
     g = 1;
     for k = 1:numLeaves-1
@@ -154,6 +154,3 @@ else
 end
 
 a = min(a,c);
-
-
-

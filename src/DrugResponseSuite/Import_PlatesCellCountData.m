@@ -12,7 +12,7 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %           - Well
 %           - NumberOfAnalyzedFields
 %           - Nuclei - Number Of Objects; can be changed to another field with
-%               option 'NobjField', e.g. 
+%               option 'NobjField', e.g.
 %               Import...(..., 'NobjField', 'Nuclei Selected - Number of Objects Nuclei Selected')
 %           note: this allows to get multiple fields from the raw datafile;
 %               the first field will be converted to Cellcount, other field
@@ -36,10 +36,10 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %               .mat or .hpdd treatment files; set to 1 for other files)
 %           - Replicate (optional - to differentiate to plates with the same
 %               treatment file, and design number if .mat/.hpdd)
-%           - Time (in hours); 
+%           - Time (in hours);
 %                   note: Time is ignored if the option 'TimeCourse' is
 %                   true; in that case, the timestamp in the Columbus file
-%                   will be used to tag the time of the sample. 
+%                   will be used to tag the time of the sample.
 %           - any Additional field with relevant plate properties to pass to the
 %               data (collagen, ...)
 %           note: 'ExpNumber' is ignored as it serves as an internal
@@ -112,7 +112,7 @@ else
     for i=1:size(filename,1)
         temp = tsv2table(filename{i,1});
         fprintf('\t%s\n', filename{i,1});
-        
+
         if size(filename,2)==2
             % replace/ add the barcode
             if any(isvariable(temp, {'Result' 'Barcode'}))
@@ -127,9 +127,9 @@ else
             temp = [table(repmat(filename(i,2), height(temp),1), ...
                 'VariableName', {'Barcode'}) temp];
         end
-        
+
         t_raw = [t_raw; temp];
-        
+
     end
 end
 
@@ -177,7 +177,7 @@ if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warnprintf('%i wells with missing fields', sum(t_raw.NumberOfAnalyzedFields<Nref))
     FieldCorrected = NobjField(strfindcell(NobjField,'Number')>0);
-    warnprintf('Correcting for field number:\n\t - %s', strjoin(FieldCorrected,'\n\t - '))    
+    warnprintf('Correcting for field number:\n\t - %s', strjoin(FieldCorrected,'\n\t - '))
     for i = find(t_raw.NumberOfAnalyzedFields~=Nref)'
         for j=1:length(FieldCorrected)
             t_raw.(FieldCorrected{j})(i) = t_raw.(FieldCorrected{j})(i)*...

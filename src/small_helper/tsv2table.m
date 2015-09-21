@@ -4,9 +4,9 @@ function t = tsv2table(filename,varargin)
 %   from a file.  TSV2TABLE assume a text file with tab delimitation.
 %
 %   T = TSV2TABLE(FILENAME) creates a table by reading from the tsv file FILENAME.
-%   T = TSV2TABLE(FILENAME, 'KeepQuote') creates a table by reading from the tsv 
+%   T = TSV2TABLE(FILENAME, 'KeepQuote') creates a table by reading from the tsv
 %       file FILENAME. Entries that have quotes (") are kept (by default: deleted)
-%   T = TSV2TABLE(FILENAME,..., varargin) creates a table by reading from the tsv 
+%   T = TSV2TABLE(FILENAME,..., varargin) creates a table by reading from the tsv
 %       file FILENAME. varargin are default READTSV options (see below).
 %
 %          Reading from a delimited text file creates one variable in T for
@@ -75,6 +75,3 @@ if Rmq
         end
     end
 end
-    
-    
-    

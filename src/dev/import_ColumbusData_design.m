@@ -9,7 +9,7 @@
 %                       result file (output from Columbus)
 %             FilesLocation.Barcode_table = table with the following
 %                       columns:  {'Barcode' 'CellLine' 'TrtFile' 'DesignNumber' 'Replicate' 'DrugSet'};
-%                   
+%
 %                       column value examples:
 %                           Barcode:    MN20140509001
 %                           CellLine:   MDAMB231
@@ -21,7 +21,7 @@
 %             FilesLocation.OutputFile = 'Results_20140310';
 %             [needed in using 'savefile']
 %                       File name for saving the results
-%   
+%
 %  savefile = save results in a file (need FilesLocation.OutputFile)
 %
 
@@ -32,7 +32,7 @@ if ~exist('extrafields','var')
 elseif ischar(extrafields)
     extrafields = {extrafields};
 end
-    
+
 fields = {'folder' 'data_file' 'Barcode_table'};
 
 for i=1:length(fields)
@@ -50,7 +50,7 @@ assert(all(ismember({'Barcode' 'CellLine' 'TrtFile' 'DesignNumber' 'Replicate' '
 
 t_raw = readtable([folder data_file],'delimiter','\t');
 
-if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warning('wells with missing fields: %i', ...
         unique(t_raw.NumberOfAnalyzedFields))
@@ -69,7 +69,7 @@ assert(length(unique(t_raw.Barcode))>=height(Barcode_table), ...
     length(unique(t_raw.Barcode)), height(Barcode_table));
 
 url = regexp(t_raw.URL,'/','split');
-PlateID = vertcat(url{:}); 
+PlateID = vertcat(url{:});
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
 CellLine = cell(height(t_raw),1);
@@ -83,18 +83,18 @@ Day0 = zeros(height(t_raw),1);
 
 cnt = 0;
 for iBC = 1:height(Barcode_table)
-    
+
     idx = find(strcmp(t_raw.Barcode, Barcode_table.Barcode{iBC}));
     assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
         length(unique(PlateID(idx))))
     assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
-    
+
     CellLine(idx) = Barcode_table.CellLine(iBC);
     Barcodes(idx) = Barcode_table.Barcode(iBC);
     TrtFile(idx) = Barcode_table.TrtFile(iBC);
     Replicate(idx) = Barcode_table.Replicate(iBC);
     DrugSet(idx) = Barcode_table.DrugSet(iBC);
-    
+
     if strcmp('Untrt', Barcode_table.TrtFile(iBC))
         Untrt(idx) = 1;
     elseif strcmp('Day0', Barcode_table.TrtFile(iBC))
@@ -102,10 +102,10 @@ for iBC = 1:height(Barcode_table)
     else
         DesignNumber(idx) = Barcode_table.DesignNumber(iBC);
     end
-    
+
     assert(all(DesignNumber(idx)>0 | Untrt(idx)>0 | Day0(idx)>0))
     cnt = cnt+1;
-    
+
 end
 assert(cnt<=length(unique(PlateID)))
 if cnt<length(unique(PlateID))
@@ -138,9 +138,9 @@ end
 t_Trt_Design = unique(t_data(t_data.DesignNumber>0,{'TrtFile' 'DesignNumber'}));
 DrugNames = {};
 for iTD=1:height(t_Trt_Design)
-    
+
     load([folder t_Trt_Design.TrtFile{iTD}])
-    
+
     temp = cellfun2(@(x) {x.name}, design(t_Trt_Design.DesignNumber(iTD)));
     temp = temp{:};
     DrugNames = unique([DrugNames MATLABsafename(ReducName(temp))]);
@@ -150,7 +150,7 @@ end
 
 
 t_CL_Trt_Design = sortrows(unique(t_data(t_data.DesignNumber>0,{'CellLine' 'TrtFile' 'DesignNumber'})));
-    
+
 DrugDoses = zeros(height(t_data), length(DrugNames));
 Ctrl = false(height(t_data), 1);
 
@@ -159,21 +159,21 @@ for ix = extrafields
 end
 
 for iCTD = 1:height(t_CL_Trt_Design)
-    
+
     data_idx = t_data.CellLine==t_CL_Trt_Design.CellLine(iCTD) & ...
         strcmp(t_data.TrtFile,t_CL_Trt_Design.TrtFile{iCTD}) & ...
         t_data.DesignNumber==t_CL_Trt_Design.DesignNumber(iCTD);
-    
+
     Layout_idx = sub2ind([16 24], t_data.Row(data_idx), t_data.Column(data_idx));
-    
+
     assert( length(unique(t_data.Replicate(data_idx)))==1 ,'Multiple replicates with same design')
-    
+
     load([folder t_CL_Trt_Design.TrtFile{iCTD}])
-    
+
     temp = cellfun2(@(x) {x.name}, design(t_CL_Trt_Design.DesignNumber(iCTD)));
     temp = MATLABsafename(ReducName(temp{:}));
     assert(all(ismember(temp, DrugNames)))
-    
+
     for iD=1:length(temp)
         DrugDoses(data_idx, strcmp(DrugNames, temp{iD})) = ...
             design{t_CL_Trt_Design.DesignNumber(iCTD)}(iD).layout(Layout_idx);
@@ -182,14 +182,14 @@ for iCTD = 1:height(t_CL_Trt_Design)
         eval([ix{:} '(data_idx)=design{t_CL_Trt_Design.DesignNumber(iCTD)}(iD).' ...
             ix{:} '(Layout_idx);']);
     end
-    
+
     tempCtrl = false(16,24);
     tempCtrl(Layout_idx) = all(DrugDoses(data_idx,:)==0,2);
     if sum(tempCtrl)>20
         tempCtrl(sub2ind([16 24], [1 1 16 16], [1 24 1 24])) = false;
     end
     Ctrl(data_idx) = tempCtrl(Layout_idx);
-    
+
 end
 %%
 tempstr = 'Ctrl';

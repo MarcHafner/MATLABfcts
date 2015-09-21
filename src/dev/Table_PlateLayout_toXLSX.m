@@ -41,38 +41,38 @@ end
 
 
 for iP = 1:nPlate
-    
+
     output = cell(17,25);
-    
+
     if ~isempty(PlateNames)
         if iscellstr(PlateNames)
             t_plate = t_layout(strcmp(t_layout.Plate,PlateNames{iP}),:);
             output{1,1} = PlateNames{iP};
         else
             t_plate = t_layout(t_layout.Plate==PlateNames(iP),:);
-            
+
             output{1,1} = sprintf('Plate %i', PlateNames(iP));
         end
     else
         output{1,1} = 'Plate layout';
         t_plate = t_layout;
     end
-    
-    
+
+
     letter_label = unique(t_plate.Row,'sorted');
     num_label = unique(t_plate.Column,'sorted');
-    
-    
+
+
     output(2:(1+length(letter_label)),1) = letter_label;
     output(1,2:(1+length(num_label))) = num2cell(num_label');
-    
-    
+
+
     for iL = 1:length(letter_label)
         for iN = 1:length(num_label)
             well = [letter_label{iL} num2str(num_label(iN),'%02i')];
             temp = t_plate(t_plate.Well==well, setdiff(t_plate.Properties.VariableNames, ...
                 {'Well' 'Column' 'Row'}));
-            
+
             str = '';
             for i=1:length(temp.Properties.VariableNames)
                 if ~isempty(temp.(temp.Properties.VariableNames{i})) && ...
@@ -84,14 +84,14 @@ for iP = 1:nPlate
                         ConvertToStr(temp.(temp.Properties.VariableNames{i})));
                 end
             end
-                    
-            
+
+
             output{1+iL, 1+iN} = str;
-            
+
         end
     end
     sheet = output{1,1};
-    
+
     if exist(filename, 'file')
         [~,sheets] = xlsfinfo(filename);
         if ismember(sheet, sheets)
@@ -100,8 +100,8 @@ for iP = 1:nPlate
             xlswrite(filename, cell(size(dumb)), sheet);
         end
     end
-    
+
     xlswrite(filename, output, sheet)
-    
-    
+
+
 end

@@ -66,10 +66,10 @@ parameters = MOMP_data.parameters;
  parfor (iW=1:MOMP_data.Nwells, (plotting==0)*100)
 % for iW=1:MOMP_data.Nwells
     fprintf('\n*** Analyzing the well %s (%s) ***\n', Wells{iW},WellLabel{iW})
-    
+
     [idx_momp(iW), Traj(iW)] = evalMOMP(rawdata(iW), ...
         plotting, parameters, useMOMPchannel, verbatim);
-    
+
     fprintf('\tSurvivors: %i, MOMP: %i, unclassified: %i, too short: %i\n', ...
         sum(isinf(idx_momp(iW).Edge)), ...
         sum((idx_momp(iW).Edge>0) & (idx_momp(iW).Edge<Inf)), ...
@@ -116,20 +116,20 @@ fret = rawdata.fret;
 fprintf('%3i cells to analyze:                      |', n_cell)
 %  parfor (q = max(min(plotting*(length(plotting)>1)),1) : n_cell, plotting)
 for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
-    
+
     if ~verbatim && mod(q,200)==1
         fprintf('\n%3i: ', q-1)
     elseif ~verbatim && mod(q,5)==1
         fprintf('.');
     end
-    
+
     e = edge(:, q);
     a = area(:, q);
     if useMOMPchannel
         m = momp(:, q);end
-    
+
     idx_last = find(~isnan(e), 1, 'last');
-    
+
     if isempty(idx_last) || (~isempty(idx_last) && idx_last < windowSize)
         if verbatim, fprintf('\t%d too short\n', q);end
         MOMPtime_Edge(q) = -1;
@@ -141,10 +141,10 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
     else
         error('unexpected case');
     end
-    
+
     idx_last = min(idx_last, MOMP_cutoff+floor(windowSize/2));
-    
-    
+
+
     E = filter_smooth(e, idx_last, windowSize);
     A = filter_smooth(a, idx_last, windowSize);
     traj_Edge(:, q) = [E(1:min(idx_last,MOMP_cutoff));
@@ -156,18 +156,18 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         traj_MOMPchannel(:, q) = [M(1:min(idx_last,MOMP_cutoff));
             NaN(MOMP_cutoff-min(idx_last,MOMP_cutoff),1)];
     end
-    
+
     %%
-    
+
     sliding_edgecutoff = edge_cutoff+nanmedian(E(5+[1:windowSize]));
     p = zeros(4,length(e)); % based on edge cutoff, edge difference, area difference and tracking
     p2 = zeros(1,length(e));
-    
+
     noise_idx = 4+find(e(5:end)>sliding_edgecutoff,1,'first');
     Enoise = eval_Trajnoise(e, E, noise_idx, windowSize);
     Anoise = eval_Trajnoise(a, A, noise_idx, windowSize);
-    
-    
+
+
     if useMOMPchannel
         sliding_edgecutoff = MOMPchannel_cutoff+nanmedian(M(5+[1:windowSize]));
         Mnoise_idx = 4+find(m(5:end)>sliding_edgecutoff,1,'first');
@@ -176,29 +176,29 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         temp_Mcutoff = MOMPchannel_cutoff+nanmean(M(1:windowSize));
         Mnoise = eval_Trajnoise(m, M, Mnoise_idx, windowSize);
     end
-    
+
     % score based on the derivate of the edge
     [p_deltaE, deltaE] = derivate_score(E, idx_last, windowSize, edge_cutoff, MOMP_cutoff, margin_delta);
     p(4,1:length(p_deltaE)) = .4*p_deltaE;
-    
+
     if useMOMPchannel
         % score based on the derivate of the MOMP channel
         p_deltaM = derivate_score(M, idx_last, windowSize, edge_cutoff, MOMP_cutoff, margin_delta);
         p_momp(3,1:length(p_deltaM)) = .4*p_deltaM;
     end
-    
+
     for i=windowSize:idx_last
         % different windows
         pre_2w = [max(windowSize-2,i-2*windowSize):(i-1)];
         pre_w = [max(windowSize-2,i-windowSize+1):(i-1)];
         post_w = [i:min([max(length(E)-5,i+windowSize), i+2*windowSize, length(E)])];
         death_w = [i:min([i+division_time, max(i+5,length(E)-5), length(E)-1])];
-        
+
         if sliding_edgecutoff > nanmean(E(pre_w))+Enoise/2
             sliding_edgecutoff = edge_cutoff+nanmedian(E(pre_2w));
             % if verbatim, fprintf('\t  edgecutoff update at %i to %.2f\n', i, sliding_edgecutoff);end
         end
-        
+
         % criteria based on edge: cutoff and ranksum test
         prob = cutoff_dist_prob(E, sliding_edgecutoff, edge_cutoff, Enoise, pre_w, pre_2w, post_w, death_w);
         p(1:2,i) = [.8 .4]'.*prob;
@@ -207,30 +207,30 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         %                     -.2* max(0,(cdf('normal',max(A(death_w)), mean(A(i:max(post_w-2))), Anoise+std(A(i:max(post_w-2)))) -.8)/.2);
         p(3,i) = .3* max(0,(.05 -precomputed_normal_cdf(max(A(death_w)), mean(A(pre_2w-2)), Anoise+std(A(pre_2w-2))))/.05) ...
             -.2* max(0,(precomputed_normal_cdf(max(A(death_w)), mean(A(i:max(post_w-2))), Anoise+std(A(i:max(post_w-2)))) -.8)/.2);
-        
+
         % contribution for end of tracking
         p(4,i) = p(4,i)* (1+ .5*max(0, min(1, ...
             (windowSize+1 -(idx_last-i-5))/(windowSize+1)))*(idx_last<MOMP_cutoff));
-        
+
         p2(i) = sum(p(:,i))*(E(i)>sliding_edgecutoff-Enoise);
-        
+
         if useMOMPchannel
             prob = cutoff_dist_prob(M, temp_Mcutoff, 0, Mnoise, pre_w, pre_2w, post_w, death_w);
             p_momp(1:2,i) = [.8 .4]'.*prob;
-            
+
             p_momp(3,i) = p_momp(3,i)* (1+ .5*max(0, min(1, ...
                 (windowSize+1 -(idx_last-i-5))/(windowSize+1)))*(idx_last<MOMP_cutoff));
-            
+
             p_momp(:,i) = p_momp(:,i)*1.9/1.6; % rescaling because not using area
             p2_momp(i) = sum(p_momp(:,i))*(M(i)>temp_Mcutoff-Mnoise);
         end
     end
-    
+
     MOMPtime_Edge(q) = DetermineMOMP(p, p2, Delta_Death_MOMP, MOMP_cutoff, p_cutoff_high, p_cutoff_low);
     traj_Prob(:,q) = [p2(1:min(length(p2),MOMP_cutoff));
         NaN(MOMP_cutoff-min(length(p2),MOMP_cutoff),1)];
-    
-    
+
+
     if verbatim
         if isinf(MOMPtime_Edge(q))
             fprintf('\t%d MOMP at %i\n', q, MOMPtime_Edge(q))
@@ -244,7 +244,7 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         MOMPtime_MOMPchannel(q) = DetermineMOMP(p_momp, p2_momp, 0, MOMP_cutoff, p_cutoff_high, p_cutoff_low);
     end
     %%
-    
+
     if any(plotting~=0) && temp_plot=='y' && ...
             ((length(plotting)>1 && ismember(q,abs(plotting)) || ...
             (length(plotting)==1 && q<abs(plotting))))
@@ -255,7 +255,7 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
             M = NaN*e;
             tM = NaN*traj_Edge(:,q);
         end
-        
+
         subplot(3,2,[1 3])
         hold on
         plot(m,'r','linewidth',1)
@@ -264,7 +264,7 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         plot(e,'b','linewidth',1)
         plot(E,'b','linewidth',2)
         plot(150+deltaE*1000,'c','linewidth',2)
-        
+
         if MOMPtime_Edge(q)>0
             plot(MOMPtime_Edge(q)*[1 1], [0 max([e;a])], '.k-', 'linewidth', 2)
             title('MOMP detected')
@@ -275,13 +275,13 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         elseif MOMPtime_Edge(q)==-2
             title('Uncertain classification')
         end
-        
+
         if useMOMPchannel && MOMPtime_Edge(q)>0
             plot(MOMPtime_Edge(q)*[1 1], [0 max([e;a])], '.r-','markersize',20)
         end
         xlim([0 length(e)])
         ylim([0 nanmax([e;a])])
-        
+
         subplot(3,2,5)
         hold on
         plot(p(1,:), 'b')
@@ -298,11 +298,11 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         if useMOMPchannel && MOMPtime_MOMPchannel(q)>0
             plot(MOMPtime_MOMPchannel(q)*[1 1], [0 2], '.r-','markersize',20)
         end
-        
+
         xlim([0 length(e)])
         ylim([-.25 2])
-        
-        
+
+
         subplot(122)
         hold on
         plot(cfp(:,q)./fret(:,q),'g','linewidth',1)
@@ -314,10 +314,10 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
         if useMOMPchannel && MOMPtime_MOMPchannel(q)>0
             plot(MOMPtime_MOMPchannel(q)*[1 1], [0 max(cfp(:,q))], '.r-','markersize',20)
         end
-        
+
         xlim([0 length(e)])
         %%
-        
+
         if plotting>0
             temp_plot = input('    Do you want more? y/n [y]: ', 's');
             if isempty(temp_plot)
@@ -327,8 +327,8 @@ for q = max(min(plotting*(length(plotting)>1)),1) : n_cell
             pause(.3)
         end
     end
-    
-    
+
+
 end
 MOMPtime.MOMPchannel = MOMPtime_MOMPchannel;
 MOMPtime.Edge = MOMPtime_Edge;
@@ -391,17 +391,14 @@ function MOMPtime = DetermineMOMP(prob_MOMP, prob2_MOMP, delta_D_MOMP, MOMP_cuto
 if any(prob2_MOMP(1:MOMP_cutoff)>p_cutoff_high)
     temp = find(prob2_MOMP(1:MOMP_cutoff)>p_cutoff_high,1,'last');
     MOMP_range = find(prob2_MOMP(1:temp)>p_cutoff_high, 1, 'first'):temp;
-    
+
     MOMPtime = find( (prob2_MOMP(MOMP_range) > max(prob2_MOMP(MOMP_range))*.95) & ...
         (prob2_MOMP(MOMP_range)>p_cutoff_high) , 1, 'last');
     MOMPtime = MOMPtime+MOMP_range(1)-1 -delta_D_MOMP;
-    
+
 elseif all(sum(prob_MOMP(:,1:MOMP_cutoff))<p_cutoff_low)
     MOMPtime = Inf;
 else
     MOMPtime = -2;
 end
 end
-
-
-

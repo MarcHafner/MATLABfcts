@@ -39,12 +39,12 @@ stock_conc = cell(length(Drugstruct),1);
 DrugIdxes = NaN(length(Drugstruct),1);
 
 for i = 1:length(Drugstruct)
-    
+
     % check for the proper ordering (necessary for indexing)
     DrugIdxes(i) = str2double(Drugstruct(i).attributes(strcmp({Drugstruct(i).attributes.name},'ID')).value);
-    
+
     DrugNames{i} = Drugstruct(i).find('Name').text;
-    
+
     % convert to uM for the stock concentration
     if Drugstruct(i).find('ConcentrationUnit').text(1) == 'n' % nM
         Concentration_conversion = 1e-3;
@@ -56,10 +56,10 @@ for i = 1:length(Drugstruct)
         error('Issue with the unit of the stock drug concentration: %s', ...
             Drugstruct(i).find('ConcentrationUnit').text)
     end
-    
+
     stock_conc{i} = str2double(Drugstruct(i).find('Concentration').text) ...
         *Concentration_conversion;
-    
+
 end
 
 [DrugNames, HMSLids] = splitHMSLid(DrugNames);
@@ -98,7 +98,7 @@ for iP = 1:length(plates)
     well_volume{iP} = str2double(plates(iP).find('AssayVolume').text) ...
         *volume_conversion;
     Barcode{iP} = plates(iP).find('Name').text;
-    
+
     treated_wells{iP} = false(plate_dims{iP});
 end
 
@@ -109,11 +109,11 @@ for iB = 1:length(DMSObackfill)
         row = str2double(well.get('R')) + 1;
         col = str2double(well.get('C')) + 1;
         iP = str2double(well.get('P')) + 1;
-        
+
         assert(iP<=length(plates))
         assert(row<=plate_dims{iP}(1))
         assert(col<=plate_dims{iP}(2))
-        
+
         treated_wells{iP}(row, col) = true;
     end
 end
@@ -128,7 +128,7 @@ Design = struct('plate_dims', plate_dims, 'treated_wells', treated_wells, ...
 DMSOwarning = true;
 
 for iP = 1:length(plates)
-    
+
     Wells = plates(iP).find('Wells').iter('Well');
     % randomization
     randomized = ~isempty(plates(iP).find('Randomize')) & ...
@@ -144,27 +144,27 @@ for iP = 1:length(plates)
         end
         Randomization = Randomization+1;
     end
-    
+
     for i=1:length(Design(iP).Drugs)
         Design(iP).Drugs(i).layout = zeros(Design(iP).plate_dims);
     end
     usedDrug = false(length(Design(iP).Drugs), 1);
-    
+
     for iW = 1:length(Wells)
         well = Wells(iW);
         row = str2double(well.get('Row')) + 1;
         col = str2double(well.get('Col')) + 1;
-        
+
         if randomized
             idx = find(all(Randomization(:,3)==col & Randomization(:,4)==row,2));
             assert(length(idx)==1)
             col = Randomization(idx,1);
             row = Randomization(idx,2);
         end
-        
+
         assert(row<=Design(iP).plate_dims(1))
         assert(col<=Design(iP).plate_dims(2))
-        
+
         fluids = well.iter('Fluid');
         for iD = 1:length(fluids)
             Didx = find( str2double(fluids(iD).get('ID')) == DrugIdxes);
@@ -179,11 +179,11 @@ for iP = 1:length(plates)
             end
         end
     end
-    
+
     % remove the drugs that are not used in that particular design
     Design(iP).Drugs = Design(iP).Drugs(usedDrug);
     assert(all(cellfun(@(x)any(any(x>0)), {Design(iP).Drugs.layout})))
-    
+
 end
 
 %% find the replicates and match the bar codes.
@@ -213,5 +213,3 @@ DesignNumber = arrayfun(@(x) find(x==DesignIdx), DesignNumber);
 TreatmentFile = repmat({[fname fext]}, length(plates),1);
 
 t_barcode = table(Barcode, TreatmentFile, DesignNumber);
-
-

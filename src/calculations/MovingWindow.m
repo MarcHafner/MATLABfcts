@@ -2,22 +2,22 @@ function [y]=moving(x,m,fun)
 %MOVING will compute moving averages of order n (best taken as odd)
 %
 %Usage: y=moving(x,n[,fun])
-%where x 	is the input vector (or matrix) to be smoothed. 
+%where x 	is the input vector (or matrix) to be smoothed.
 %      m 	is number of points to average over (best odd, but even works)
 %      y 	is output vector of same length as x
 %      fun  (optional) is a custom function rather than moving averages
 %
 % Note:if x is a matrix then the smoothing will be done 'vertically'.
-% 
+%
 %
 % Example:
 %
 % x=randn(300,1);
-% plot(x,'g.'); 
+% plot(x,'g.');
 % hold on;
-% plot(moving(x,7),'k'); 
+% plot(moving(x,7),'k');
 % plot(moving(x,7,'median'),'r');
-% plot(moving(x,7,@(x)max(x)),'b'); 
+% plot(moving(x,7,@(x)max(x)),'b');
 % legend('x','7pt moving mean','7pt moving median','7pt moving max','location','best')
 %
 % optimized Aslak Grinsted jan2004
@@ -63,7 +63,7 @@ else
     for ii=1:size(y,1);
         y(ii,:)=fun(x(ii+(0:m1),:));
     end
-    
+
 end
 
 return

@@ -79,7 +79,7 @@ if ~(all(stock_conc>=10 & stock_conc<=5e4))
     warning('Stock concentration should be in uM!')
     pause
 end
-    
+
 if length(stock_conc)==1
     stock_conc = stock_conc*ones(length(DrugNames),1);
 end
@@ -120,7 +120,7 @@ nWells = length(Wellidx);
 
 %% assign the design for each replicate
 for iR = 1:nReps
-    
+
     s = RandStream('mt19937ar','Seed',Seed+iR-1);
     RandStream.setGlobalStream(s);
     if Seed>0
@@ -129,16 +129,14 @@ for iR = 1:nReps
         idx = 1:nWells;
     end
     order = sortidx(idx','ascend'); % find the order for the treatment on the plate
-    
+
     for iD = 1:length(DrugNames)
         Designs(iR).Drugs(iD).layout(Wellidx(order)) = ...
             DrugLayout{iD}(Wellidx);
     end
-    
-    
-end
 
 
 end
 
 
+end

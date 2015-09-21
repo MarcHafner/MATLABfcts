@@ -16,12 +16,12 @@ if ~isfield(plotopt, 'axis')
 end
 
 if exist('ClusterStats','var') && ~isempty(ClusterStats)
-    Nclust = ClusterStats.Nclust;    
+    Nclust = ClusterStats.Nclust;
     Cluster = 1;
     Nbars = length(ClusterStats.cnt);
 else
     Nclust = max(Gidx);
-    Cluster = 0;   
+    Cluster = 0;
     Nbars = max(Gidx);
 end
 
@@ -51,10 +51,10 @@ for iF = 1:length(fields)
         Fiscat(iF) = true;
         Fcats{iF} = unique(t_group_data.(fields{iF}));
         Fsize(iF) = length(Fcats{iF});
-    elseif ~isnumeric(t_group_data.(fields{iF})) 
+    elseif ~isnumeric(t_group_data.(fields{iF}))
         error('fields %s should be categorical or numeric', fields{iF})
     end
-    
+
     if Fiscat(iF)
         isnum = isnumeric(Fcats{iF});
         if isnum
@@ -66,7 +66,7 @@ for iF = 1:length(fields)
             Fcats{iF} = union(intersect(plotopt.(fields{iF}), Fcats{iF}, 'stable'), ...
                 setdiff(Fcats{iF}, plotopt.(fields{iF}), 'stable'), 'stable');
         end
-        
+
         Ffraction{iF} = zeros(Nbars, Fsize(iF));
         for i=1:Nbars
             if isnum
@@ -121,7 +121,7 @@ if Cluster
     for i=1:length(h);set(h(i),'color','k'),end
     set(gca,'xtick',[],'ytick',[],'Visible','off')
     xlim([.5 Nbars+.5])
-    
+
     txtoutput(end+(1:2),:) = [{'Dist with left Clust'; 'Dist with right Clust'} ...
         num2cellstr([0 diag(ClusterStats.ClDist,-1)' NaN;
         diag(ClusterStats.ClDist,1)' NaN NaN])];
@@ -134,15 +134,15 @@ for iF=1:length(fields)
 
         % text output
         txtoutput{end+2,1} = fields{iF};
-        
+
     if Fiscat(iF)
         h = bar(GroupPos, Ffraction{iF}, barw, 'stack');
         hl = legend(h(end:-1:1), Fcats{iF}(end:-1:1), ...
             'location','eastoutside','interpreter','none', plotopt.labels{:});
         posl = get(hl,'position');
         set(hl,'position',[xlpos posl(2:4)])
-        
-        if isfield(plotopt, [fields{iF} 'Colors']) && isfield(plotopt, fields{iF}) 
+
+        if isfield(plotopt, [fields{iF} 'Colors']) && isfield(plotopt, fields{iF})
             for i=1:length(h)
                 if any(strcmp(get(h(i),'DisplayName'), plotopt.(fields{iF})))
                     set(h(i),'facecolor',plotopt.([fields{iF} 'Colors'])( ...
@@ -154,12 +154,12 @@ for iF=1:length(fields)
         end
         ylim([0 1.01])
         ylabel(['Dist. ' fields{iF}], 'interpreter','none', plotopt.labels{:})
-        
+
         % text output
         txtoutput(end+(1:length(Fcats{iF})),:) = [Fcats{iF} num2cellstr(Ffraction{iF}')];
     else
         txtoutput{end,1} = [txtoutput{end,1} ' (quantiles)'];
-        
+
         plot([0 max(Gidx)+1], [1 1], '-r')
         plot([0 max(Gidx)+1], [0 0], '-r')
         plot([0 max(Gidx)+1], -log10([.05 .05]), '-r')
@@ -168,7 +168,7 @@ for iF=1:length(fields)
         quants = [0 .1 .25 .5 .75 .9 1];
         idx = size(txtoutput,1)+(1:length(quants));
         txtoutput(idx,1) = num2cellstr(quants');
-        
+
         for i=1:max(Gidx)
             plot_vbox(GroupPos(i), t_group_data.(fields{iF})(Gidx==i));
             txtoutput(idx,i+1) = ...
@@ -176,7 +176,7 @@ for iF=1:length(fields)
         end
         ylims = [min(t_group_data.(fields{iF})) max(t_group_data.(fields{iF}))];
         ylim([ylims(1)-.05*diff(ylims) ylims(2)+.05*diff(ylims)])
-        
+
         ylabel(fields{iF}, 'interpreter','none', plotopt.labels{:})
     end
     set(gca, plotopt.axis{:})
@@ -187,8 +187,8 @@ Clustercount = hist(Gidx,1:Nbars);
 a(end+1) = get_newaxes([xpos ypos(end,1) xwidth ypos(end,2)],1);
 bar(GroupPos, Clustercount, barw,'k');
 ylim([0 max(Clustercount(1:Nclust))*1.05])
-        
-        
+
+
 for i=1:length(a)
     xlim(a(i), [.5 Nbars+.5])
     set(a(i),'xtick',[])
@@ -199,5 +199,3 @@ set(a(end),'xtick',GroupPos,'xticklabel',1:Nbars, plotopt.axis{:})
 %%
 
 cell2tsv([plotopt.figurename '.tsv'], txtoutput);
-
-    

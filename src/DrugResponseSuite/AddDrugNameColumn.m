@@ -11,4 +11,3 @@ for i=(Ndrugs_in+1):Ndrugs
     t_out = [t_out table(temp_DrugName, temp_HMSLid, temp_Conc, ...
         'variableNames', strcat({'DrugName' 'HMSLid' 'Conc'}, num2str(i)))];
 end
-    

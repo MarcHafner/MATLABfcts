@@ -108,11 +108,11 @@ for iC1 = 1:length(Conc1)
     for iC2 = 1:length(Conc2)
         idx = find(t_data.DrugName==DrugPair(1) & t_data.DrugName2==DrugPair(2) & ...
             t_data.Conc==Conc1(iC1) & t_data.Conc2==Conc2(iC2));
-        
+
         for iF = 1:length(OutputFields)
             OutputMx(1+iC1, 1+iC2, iF) = mean(t_data.(OutputFields{iF})(idx));
         end
-        
+
         for i=1:length(idx)
             if ~exist('bkgrdField','var') || isempty(bkgrdField)
                 SCDist{1+iC1,1+iC2}{i} = SingleCell(idx(i)).(Field);
@@ -144,4 +144,3 @@ OutputDist = NormSCDist;
 OutputDist(ConcIdx) = cellfun2(@(x) cellfun2(@(y) ksdensity(y,Distbins,'width',2*step)', x), ...
     NormSCDist(ConcIdx));
 OutputDist(ConcIdx) = cellfun2(@(x)[x{:}],OutputDist(ConcIdx));
-

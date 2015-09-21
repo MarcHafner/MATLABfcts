@@ -12,4 +12,3 @@ elseif iscellstr(name)
         name{i} = MATLABsafename(name{i});
     end
 end
-        

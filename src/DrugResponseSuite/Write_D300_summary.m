@@ -23,17 +23,17 @@ for iPlte = 1:height(t_plates)
     if Didx==0
         continue
     end
-    
+
     WellVolume = Designs(Didx).well_volume;
     for iDr=1:length(Designs(Didx).Drugs)
-        
+
         Drug = Designs(Didx).Drugs(iDr).DrugName;
         Didx = find(strcmp({Drugs.name}, Drug));
-    
+
         stock_conc = Drugs(Didx).stock_conc;
-        
+
         Volume(Didx,iPlte) = sum(Designs(Didx).Drugs(iDr).layout(:)) ...
-            *WellVolume/stock_conc;        
+            *WellVolume/stock_conc;
     end
 end
 
@@ -44,11 +44,10 @@ output(2:end,3) = {Drugs.stock_conc}';
 for iDr=1:length(Drugs)
     output{iDr+1,end} = 1+ceil(sum(Volume(iDr,:)/100))/10;
 end
-            
-    
+
+
 %%
 tsvwrite(filename, output, 'summary_drugs');
 
 
 end
-

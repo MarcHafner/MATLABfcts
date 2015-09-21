@@ -25,7 +25,7 @@ if any(multiidx)
         fprintf('---   %i    -----\n', i)
         disp(t_left(multiidx(i),:))
         disp(t_right(Ridx(multiidx(i)==idx),:))
-        
+
         if mod(i,10)==0
             pause
         end

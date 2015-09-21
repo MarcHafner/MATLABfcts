@@ -12,7 +12,7 @@ for i=1:length(Des1)
     DrugStruct = [Des1(i).Drugs; Des2(i).Drugs];
     Design(i).treated_wells = [Des1(i).treated_wells Des2(i).treated_wells];
     Design(i).plate_dims = size(Design(i).treated_wells);
-    
+
     HMSLid = cell(length(Drugs),1);
     layout = cell(length(Drugs),1);
     stock_conc = cell(length(Drugs),1);
@@ -31,12 +31,12 @@ for i=1:length(Des1)
         end
         layout{iD} = [layout1 layout2];
     end
-    
+
     Design(i).Drugs = struct('DrugName', Drugs, 'HMSLid', HMSLid, ...
         'stock_conc', stock_conc, 'layout', layout);
-    
-    
-    Perturbations = unique([{Des1(i).Perturbations.Name} {Des2(i).Perturbations.Name}])';    
+
+
+    Perturbations = unique([{Des1(i).Perturbations.Name} {Des2(i).Perturbations.Name}])';
     layout = cell(1,length(Perturbations));
      for iD = 1:length(Perturbations)
         if ismember(Perturbations{iD}, {Des1(i).Perturbations.Name})
@@ -55,16 +55,14 @@ for i=1:length(Des1)
             if iscell(Des1(i).Perturbations(strcmp(Perturbations(iD), ...
                     {Des1(i).Perturbations.Name})).layout)
                 layout2 = cell(Des2(i).plate_dims);
-            else                
+            else
                 layout2 = zeros(Des2(i).plate_dims);
             end
         end
         layout{iD} = [layout1 layout2];
     end
-    
+
     Design(i).Perturbations = struct('Name', Perturbations, 'layout', layout);
-    
-    
+
+
 end
-    
-    

@@ -26,34 +26,34 @@ plates = unique(t_data.Barcode);
 for iP = 1:length(plates)
     pidx = t_data.Barcode == plates(iP);
     subt = t_data(pidx,:);
-        
+
     [data, labels] = table_to_ndarray(subt, 'keyvars', {'Row' 'Column' 'Time'}, ...
         'outer', 1, 'valvars', 'focus');
-    
+
     %%
     if plotting, get_newfigure(998,[50 550 900 300]), end
-    
+
     for iC=1:length(labels{2}.Column)
         fprintf('.');
         for iR=1:length(labels{1}.Row)
-            
+
             dist = (abs(labels{1}.Row-labels{1}.Row(iR)))*ones(1,height(labels{2})) + ...
                 ones(height(labels{1}),1)*(.5+abs(labels{2}.Column-labels{2}.Column(iC)))';
             [test_R, test_C] = find(dist<=quantile(dist(:), 10/numel(dist)));
             focus = data(test_R, test_C, :);
             Wfocus = squeeze(data(iR,iC,:));
-            
+
             preNdist = fitdist(focus(:), 'normal');
             Ndist = fitdist(focus( abs(preNdist.cdf(focus(:))-.5)<(.5-pval*2.5)), 'normal');
             Ndist = fitdist(focus( abs(Ndist.cdf(focus(:))-.5)<(.5-pval*2.5)), 'normal');
-            
+
             if plotting,
                 x = min(focus(:)):max(focus(:));
                 prep = preNdist.pdf(x);
                 p = Ndist.pdf(x);
                 n = ksdensity(focus(:), x, 'width', diff(quantile(focus(:),[.48 .52])));
                 nW = ksdensity(Wfocus, x, 'width', diff(quantile(focus(:),[.48 .52])));
-                
+
                 clf
                 hold on
                 plot(x, n/max(n), '-b')
@@ -69,19 +69,19 @@ for iP = 1:length(plates)
                 end
             end
             %%
-            
+
             idx = find(pidx & t_data.Row==labels{1}.Row(iR) & ...
                 t_data.Column==labels{2}.Column(iC));
             [~, idxT] = ismember(labels{3}.Time, t_data.Time(idx));
-            
-            
+
+
             t_data.filtered(idx(idxT)) = (Wfocus<lowerbound) | (Wfocus>upperbound);
             t_data.deltafocus(idx(idxT)) = Wfocus-Ndist.mu;
         end
         %         if any(abs(delta(:))>1)
         %             [filt_Row, filt_Col] = find(abs(delta)>1); true;
         %         end
-        
+
     end
     fprintf('\n');
 end

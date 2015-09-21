@@ -26,7 +26,7 @@ for i=1:size(data,1)
             data{i,j} = strjoin(strcat(regexp(data{i,j},'\','split'),'\\'),'');
         end
     end
-    
+
     data(i,1:end-1) = strcat(data(i,1:end-1),delimiter);
     fprintf(file,[data{i,:}]);
     if i<size(data,1)

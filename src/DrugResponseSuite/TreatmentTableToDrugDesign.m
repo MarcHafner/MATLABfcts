@@ -15,7 +15,7 @@ function Design = TreatmentTableToDrugDesign(t_design, plate_dims)
 %                   - SeedingNumber
 %                   - other perturbations (e.g. EGF/...)
 %                   - DrugName2/3/... and Conc2/3/... for multiple drugs per well
-%   plate_dims : specify the plate_size if not all well are treated 
+%   plate_dims : specify the plate_size if not all well are treated
 %
 %   Design :    array of design structures with the following fields:
 %                   - plate_dims (plate dimension)
@@ -77,7 +77,7 @@ for iD = 1:length(DrugNames)
     layouts{iD} = zeros(plate_dims);
     idx = t_design.DrugName==DrugNames{iD};
     layouts{iD}(sub2ind(plate_dims, rows(idx), cols(idx))) = t_design.Conc(idx);
-    
+
     % case of multiple columns
     for iND2 = 2:Ndrugs
         idx = t_design.(['DrugName' num2str(iND2)])==DrugNames{iD};
@@ -87,8 +87,8 @@ for iD = 1:length(DrugNames)
         end
         layouts{iD}(sub2ind(plate_dims, rows(idx), cols(idx))) = ...
             layouts{iD}(sub2ind(plate_dims, rows(idx), cols(idx))) + ...
-            t_design.(['Conc' num2str(iND2)])(idx);        
-    end    
+            t_design.(['Conc' num2str(iND2)])(idx);
+    end
 end
 
 % check for an HMSLid
@@ -96,7 +96,7 @@ if isvariable(t_design, 'HMSLid')
     HMSLids = cell(length(DrugNames),1);
     for iD = 1:length(DrugNames)
         HMSLids{iD} = AnyToString(t_design.HMSLid(find(t_design.DrugName==DrugNames{iD},1,'first')));
-        if isempty(HMSLids{iD}) 
+        if isempty(HMSLids{iD})
             % check for additional information in other columns
             for iND2 = 2:Ndrugs
                 if isvariable(t_design, ['HMSLid' num2str(iND2)])
@@ -110,7 +110,7 @@ if isvariable(t_design, 'HMSLid')
             HMSLids{iD} = '-';
         end
     end
-    
+
     Drugs = struct('DrugName', DrugNames, 'layout', layouts, 'HMSLid', HMSLids);
 else
     Drugs = struct('DrugName', DrugNames, 'layout', layouts);
@@ -124,7 +124,7 @@ PertNames = ToColumn(setdiff(varnames(t_design), [{'Well' 'DrugName' 'Conc' 'Row
     strcat('HMSLid', cellfun(@(x) {num2str(x)}, num2cell(2:Ndrugs)))], 'stable'));
 
 layouts = cell(length(PertNames),1);
-for iP = 1:length(PertNames)    
+for iP = 1:length(PertNames)
     temp = t_design.(PertNames{iP});
     if iscategorical(temp);
         temp = cellstr(temp);
@@ -134,7 +134,7 @@ for iP = 1:length(PertNames)
     else
         layouts{iP} = repmat({''},plate_dims);
     end
-    layouts{iP}(sub2ind(plate_dims, rows, cols)) = temp;    
+    layouts{iP}(sub2ind(plate_dims, rows, cols)) = temp;
 end
 Perturbations = struct('Name',PertNames, 'layout', layouts);
 

@@ -28,7 +28,7 @@ for iTf = 1:length(Trtfiles)
         'Treatment file %s missing in folder %s', Trtfiles{iTf}, folder)
     [~,~,ext] = fileparts(Trtfiles{iTf});
     fprintf('\tLoading %s\n', Trtfiles{iTf})
-    
+
     DesignNumbers{iTf} = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
     if strcmp(ext,'.mat')
         temp = load(fullfile(folder, Trtfiles{iTf}));
@@ -57,12 +57,12 @@ Perturbations = {};
 DrugNames = {};
 t_HMSLids = table;
 for iD=1:numel(allDesigns)
-    
+
     % check for multiple drugs in the same well
-    if ~isfield(allDesigns{iD},'Drugs') || isempty(allDesigns{iD}.Drugs) 
+    if ~isfield(allDesigns{iD},'Drugs') || isempty(allDesigns{iD}.Drugs)
         continue
     end
-    
+
     DrugConc = reshape([allDesigns{iD}.Drugs.layout], [allDesigns{iD}.plate_dims ...
         length(allDesigns{iD}.Drugs)]);
     DrugNames = unique([DrugNames {allDesigns{iD}.Drugs.DrugName}],'stable');
@@ -75,7 +75,7 @@ for iD=1:numel(allDesigns)
         warnprintf('some wells have %i drugs, additional columns in output', ...
             Ndrugs)
     end
-    
+
     % store all possible perturbations
     if isfield(allDesigns{iD}, 'Perturbations')
         Perturbations = unique([Perturbations {allDesigns{iD}.Perturbations.Name}], 'stable');
@@ -107,7 +107,7 @@ datafields = cell(1, length(fields));
 t_annotated = table;
 
 for iTf = 1:length(Trtfiles)
-    
+
     DesignNumbers = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
     fprintf('\tDesign %s:\n', Trtfiles{iTf} )
     for iDN = 1:length(DesignNumbers)
@@ -117,15 +117,15 @@ for iTf = 1:length(Trtfiles)
                 correct_barcode{iTf}.Barcode(DesignNumbers(iDN))), ...
                 'Mismatch between barcodes in the hpdd file and the DesignNumber')
             fprintf('\thpdd exp %i -> design %i\n', DesignNumbers(iDN), DNidx);
-            
+
         else
             DNidx = DesignNumbers(iDN);
         end
         t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);
         idx = find(t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN));
-        
+
         % could be extended to any variable that is found in both Plate
-        % Info and Design 
+        % Info and Design
         Common_vars = setdiff(intersect(varnames(t_data), varnames(t_design)), 'Well');
         for iV = 1:length(Common_vars)
 %         if isvariable(t_design, 'CellLine')
@@ -137,7 +137,7 @@ for iTf = 1:length(Trtfiles)
 %         else
 %             varToKeep = varnames(t_data);
 %         end
-        
+
         [temp, ia] = innerjoin(t_data(idx,varToKeep), t_design, 'keys', 'Well');
         if height(temp)<length(idx)
             warnprintf('Some wells (%s) have no annotations in file %s --> ignored', ...
@@ -146,7 +146,7 @@ for iTf = 1:length(Trtfiles)
         end
         temp = AddDrugNameColumn(temp, Ndrugs);
         temp.Untrt(temp.pert_type=='Untrt') = true;
-        
+
         if ~isempty(t_annotated)
             newvars = setdiff(varnames(temp), varnames(t_annotated));
             for i=1:length(newvars)
@@ -163,9 +163,9 @@ for iTf = 1:length(Trtfiles)
         else
             t_annotated = temp;
         end
-        
+
     end
-    
+
 end
 
 % fill up the columns for the untreated plates before merging
@@ -173,7 +173,7 @@ Untrtidx = t_data.TreatmentFile=='-';
 if any(Untrtidx)
     NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
     pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
-    
+
     if isempty(t_annotated)
         othervars = varnames(t_data);
         newvars = {};
@@ -188,7 +188,7 @@ if any(Untrtidx)
             {sprintf('DrugName%i', iD(iD>1)), sprintf('HMSLid%i', iD(iD>1))}) ...
             table(zeros(sum(Untrtidx),1), 'VariableName', {sprintf('Conc%i', iD(iD>1))})];
     end
-    
+
     addvars = setdiff(newvars, varnames(temp));
     for i=1:length(addvars)
         %%% need to treat the case of SeedingNumber
@@ -202,7 +202,7 @@ if any(Untrtidx)
                 'VariableName', addvars(i))];
         end
     end
-    
+
     if isempty(t_annotated)
         t_annotated = [t_data(Untrtidx,othervars) temp(:,newvars) table(pert_type)];
     else

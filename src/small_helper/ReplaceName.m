@@ -33,5 +33,5 @@ else
     if IsUp
         Repstr = upper(Repstr);
     end
-    
+
 end

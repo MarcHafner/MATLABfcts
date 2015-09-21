@@ -1,7 +1,7 @@
 function fhandle = get_newfigure(number, position, varargin)
 % fhandle = get_newfigure(number, position, varargin)
 %   get a clean new figure
-%   first argument of varargin can be the filename 
+%   first argument of varargin can be the filename
 %   further should be pairs of parameter/value as in set(gcf, ...)
 %
 
@@ -10,7 +10,7 @@ if ~exist('position','var') || isempty(position)
 end
 
 if nargout==0
-    figure(number)    
+    figure(number)
 else
     fhandle = figure(number);
 end

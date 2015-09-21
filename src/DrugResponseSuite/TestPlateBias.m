@@ -5,7 +5,7 @@ function [biased, edge_res, col_res, row_res] = TestPlateBias(t_data, BiasCutoff
 %
 %       BiasCutoff: [minimal drop cutoff      p-value cutoff];
 %                       default = [.1 .01]
-%                   can be a 3x2 matrix for each condition: 
+%                   can be a 3x2 matrix for each condition:
 %                           edge, column, row
 %
 %       biased:     [edge_res, col_res, row_res] < cutoff & significant
@@ -63,59 +63,59 @@ VarToTest = setdiff(varnames(t_data), {'Well' 'Row' 'Column' 'DistEdge' 'Barcode
 
 
 for iv = 1:length(VarToTest)
-    
+
     meanvals = mean(t_data.(VarToTest{iv}));
     relvals = (t_data.(VarToTest{iv})-meanvals)/meanvals;
-    
+
     %% test for biased based on the distance from the edge
     edge_res = NaN(min(6, max(t_data.DistEdge)), 3);
     for i=1:min(6, max(t_data.DistEdge))
         % takes two ranges at the same time
         vals = relvals(abs(t_data.DistEdge-i)<2);
         nulldist = relvals(t_data.DistEdge>(i+1));
-        
+
         if length(vals)<30 || length(nulldist)<30
             continue
         end
-        
+
         [~,p] = ttest2(vals, nulldist);
-        
+
         edge_res(i,:) = [mean(vals) std(vals) p];
     end
-    
+
     %% test for biased based on the column (set of 3 columns)
-    
+
     col_res = NaN(maxcol,3);
     for i=1:maxcol
         vals = relvals( abs(t_data.Column-i)<2 );
         nulldist = relvals( abs(t_data.Column-i)>=2 );
-        
+
         if length(vals)<30 || length(nulldist)<30, continue, end
-        
+
         [~,p] = ttest2(vals, nulldist);
-        
+
         col_res(i,:) = [mean(vals) std(vals) p];
     end
-    
+
     %% test for biased based on the column (set of 2 columns)
-    
+
     row_res = NaN(maxrow,3);
     for i=1:maxrow
         vals = relvals( abs(t_data.Row-i)<2 );
         nulldist = relvals( abs(t_data.Row-i)>=2 );
-        
+
         if length(vals)<30 || length(nulldist)<30, continue, end
-        
+
         [~,p] = ttest2(vals, nulldist);
-        
+
         row_res(i,:) = [mean(vals) std(vals) p];
     end
-    
+
     %% plot results
     biased = [any(edge_res(:,1)<-BiasCutoff(1,1) & edge_res(:,3)<BiasCutoff(1,2)) ...
         any(col_res(:,1)<-BiasCutoff(2,1) & col_res(:,3)<BiasCutoff(2,2)) ...
         any(row_res(:,1)<-BiasCutoff(3,1) & row_res(:,3)<BiasCutoff(3,2))];
-    
+
     %
     if plotting>=1 || (plotting==.5 && any(biased))
         figure(999)
@@ -126,12 +126,12 @@ for iv = 1:length(VarToTest)
             [0 max(max(plate(:,:,1)))])
         xlim([.5 maxcol+.5])
         ylim([.5 maxrow+.5])
-         
+
         title([barcode ' - ' VarToTest{iv}], 'fontsize', 8, 'fontweight', 'bold', ...
             'interpreter', 'none')
         set(gca,'fontsize',6, 'ytick', labels{1}.Row, 'xtick', labels{2}.Column(1:2:end))
-        
-        
+
+
         get_newaxes([.65 .7 .31 .24],1)
         h = xyerrorbars(1:size(edge_res,1), [], edge_res(:,1), edge_res(:,2));
         set(h(1),'linewidth',1.5, 'color','k')
@@ -149,12 +149,12 @@ for iv = 1:length(VarToTest)
         ylim([-.7 .5])
         title('Edge bias', 'fontsize', 8, 'fontweight', 'bold')
         set(gca,'fontsize',6)
-        
+
         get_newaxes([.65 .37 .31 .24],1)
         h = xyerrorbars(1:size(col_res,1), [], col_res(:,1), col_res(:,2));
         set(h(1),'linewidth',1.5, 'color','k')
         plot([0 size(col_res,1)+[1 1] 0], -BiasCutoff(2,1)*[1 1 0 0], 'k');
-        for i=1:size(col_res,1)            
+        for i=1:size(col_res,1)
             if col_res(i,3)<BiasCutoff(2,2)
                 text(i, .1, '*', 'fontsize', 7, 'fontweight', 'bold', ...
                     'horizontalalign', 'center')
@@ -167,12 +167,12 @@ for iv = 1:length(VarToTest)
         ylim([-.7 .5])
         title('Column bias', 'fontsize', 8, 'fontweight', 'bold')
         set(gca,'fontsize',6)
-        
+
         get_newaxes([.65 .04 .31 .24],1)
         h = xyerrorbars(1:size(row_res,1), [], row_res(:,1), row_res(:,2));
         set(h(1),'linewidth',1.5, 'color','k')
         plot([0 size(row_res,1)+[1 1] 0], -BiasCutoff(3,1)*[1 1 0 0], 'k');
-        for i=1:size(row_res,1)            
+        for i=1:size(row_res,1)
             if row_res(i,3)<BiasCutoff(3,2)
                 text(i, .1, '*', 'fontsize', 7, 'fontweight', 'bold', ...
                     'horizontalalign', 'center')
@@ -185,7 +185,7 @@ for iv = 1:length(VarToTest)
         ylim([-.7 .5])
         title('Row bias', 'fontsize', 8, 'fontweight', 'bold')
         set(gca,'fontsize',6)
-        
+
         if plotting==1
             pause
         elseif plotting==2
@@ -193,7 +193,7 @@ for iv = 1:length(VarToTest)
         else
             pause(1)
         end
-    
+
     end
-    
+
 end

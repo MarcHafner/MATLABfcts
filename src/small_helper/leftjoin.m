@@ -14,4 +14,3 @@ Ridx = Ridx(sortidx(idx));
 assert(all(idx>0))
 warnassert(all(hist(idx,1:height(t_left))<=1), ...
     'LEFTJOIN: multiple entries from t_right match a row of t_left')
-

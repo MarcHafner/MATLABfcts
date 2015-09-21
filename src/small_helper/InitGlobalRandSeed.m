@@ -5,4 +5,3 @@ function InitGlobalRandSeed(s)
 
     s = RandStream('mt19937ar','Seed',s);
     RandStream.setGlobalStream(s);
-    

@@ -86,8 +86,8 @@ assert(axis_height>0, 'Too many rows, reduce yspacing')
 linetypes = {'-' ':' '--'};
 for iyp = 1:nRows
     for ixp=1:nCols
-        
-        
+
+
         if isvariable(yplotkeys,'noyplot')
             if yplotkeys.noyplot==0
                 xidx = ixp;
@@ -102,20 +102,20 @@ for iyp = 1:nRows
             xidx = ixp;
             yidx = iyp;
         end
-        
+
         a(iyp, ixp) = get_newaxes([xspacing*1.5+(ixp-1)*(axis_width+xspacing) ...
             yspacing*1.5+(nRows-iyp)*(axis_height+yspacing) axis_width axis_height],1,...
             'fontsize',6);
-        
-        
+
+
         if isvariable(yplotkeys,'noyplot')
             title([strjoin(p.xplotkey,',') '=' strjoin(table2cellstr(xplotkeys(xidx,:),0),',')])
         else
             title({[strjoin(p.xplotkey,',') '=' strjoin(table2cellstr(xplotkeys(xidx,:),0),',') ';'];
                 [strjoin(p.yplotkey,',') '=' strjoin(table2cellstr(yplotkeys(yidx,:),0),',')]})
         end
-        
-        
+
+
         xvals = t_data.(p.xaxiskey)(eqtable(t_data(:,p.xplotkey),xplotkeys(xidx,:)) & ...
             eqtable(t_data(:,p.yplotkey),yplotkeys(yidx,:)));
         if isempty(xvals), continue, end
@@ -124,7 +124,7 @@ for iyp = 1:nRows
             plot([min(xvals(:)) max(xvals(:))], p.yval_lines(i)*[1 1], ...
                 '-', 'color', [.8 .8 .8])
         end
-                
+
         for iC = 1:length(colorkeys)
             subt = t_data(eqtable(t_data(:,p.xplotkey),xplotkeys(xidx,:)) & ...
                 eqtable(t_data(:,p.yplotkey),yplotkeys(yidx,:)) & ...
@@ -133,19 +133,19 @@ for iyp = 1:nRows
                 continue
             end
 
-            subt.(p.xaxiskey) = p.xtransform(subt.(p.xaxiskey));            
+            subt.(p.xaxiskey) = p.xtransform(subt.(p.xaxiskey));
                 for iyak = 1:length(p.yaxiskey)
                     subt.(p.yaxiskey{iyak}) = p.ytransform{iyak}(subt.(p.yaxiskey{iyak}));
-                end            
+                end
             subt = sortrows(subt, p.xaxiskey);
-            
+
             if ~p.mean_SEM
                 for iyak = 1:length(p.yaxiskey)
                     temph = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), ['.' linetypes{iyak}], ...
                         'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
                     if iyak==1, h(iC) = temph;end
                 end
-                
+
             else
                 y_mean = collapse(subt, @mean, 'keyvars', {p.xaxiskey}, 'valvars', p.yaxiskey);
                 y_SEM = collapse(subt, @SEM,  'keyvars', {p.xaxiskey}, 'valvars', p.yaxiskey);

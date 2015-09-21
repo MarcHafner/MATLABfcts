@@ -62,7 +62,7 @@ if ~exist('usefit','var'), usefit=false; end
 
 Results = Results(:,:,strcmp(Fields,varname));
 
-if exist('cap','var'), 
+if exist('cap','var'),
     Results(~isnan(Results)) = min(Results(~isnan(Results)), cap);
 end
 
@@ -75,11 +75,11 @@ if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
         repmat(Results(:,1),1,size(Results,2)) + ...
         repmat(Results(1,:),size(Results,1),1).*repmat(Results(:,1),1,size(Results,2));
     Results(1,1) = 0;
-    
+
     if ~exist('SingleCutoff','var') || isempty(SingleCutoff)
         SingleCutoff = Inf;
     end
-    
+
     SelectIdx1 = find(Results(:,1)<=SingleCutoff);
     SelectIdx2 = find(Results(1,:)<=SingleCutoff);
 elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'RelCellCnt'})) || ...
@@ -90,11 +90,11 @@ elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'RelCellCnt'})
         (1-repmat(Results(:,1),1,size(Results,2))) + ...
         (1-repmat(Results(1,:),size(Results,1),1)).*(1-repmat(Results(:,1),1,size(Results,2)));
     Results(1,1) = 1;
-    
+
     if ~exist('SingleCutoff','var') || isempty(SingleCutoff)
         SingleCutoff = -Inf;
     end
-    
+
     SelectIdx1 = find(Results(:,1)>=SingleCutoff);
     SelectIdx2 = find(Results(1,:)>=SingleCutoff);
 else
@@ -103,4 +103,3 @@ end
 
 temp = Bliss(SelectIdx1, SelectIdx2);
 BlissScore = nanmean(temp(:));
-

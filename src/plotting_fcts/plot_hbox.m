@@ -34,7 +34,7 @@ if exist('opt','var')
         end
     end
 end
-    
+
 ih = ishold;
 
 Gq = quantile(values,quantiles);

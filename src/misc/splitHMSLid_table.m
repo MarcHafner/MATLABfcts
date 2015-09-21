@@ -3,7 +3,7 @@ function t_out = splitHMSLid_table(t_in, varname)
 if~exist('varname','var')
     varname = 'DrugName';
 end
-    
+
 DrugNames = t_in.(varname);
 
 [DrugNames, HMSLids] = splitHMSLid(DrugNames);

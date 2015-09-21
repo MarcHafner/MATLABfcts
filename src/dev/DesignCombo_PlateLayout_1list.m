@@ -13,14 +13,14 @@ if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
 end
 
-if randomize_seed>1e3    
+if randomize_seed>1e3
     s = RandStream('mt19937ar','Seed',mod(randomize_seed,1e9));
     RandStream.setGlobalStream(s);
 end
 
 % well volume
 well_volume = 6e-5;
-min_volumedrop = 1e-11; % minimum step of the drop is 10pl for the 
+min_volumedrop = 1e-11; % minimum step of the drop is 10pl for the
 max_volumedrop = 1.2e-7; % need a dilution of 500-fold minimum
 
 % stock conc in mM
@@ -41,17 +41,17 @@ total_cnt = length(Drugs)*length(SingleDoses) + ...
 
 
 for iD = 1:length(Drugs)
-        
+
     drugs_struct(iD).Doses = round_Conc(Doses(iD,:), ...
         drugs_struct(iD).nominal_conc);
     drugs_struct(iD).SingleDoses = round_Conc(SingleDoses(iD,:), ...
         drugs_struct(iD).nominal_conc);
-    
+
     assert(all(ismember(Doses(iD,:), SingleDoses(iD,:))),...
         'Dose in the combo not found in the titration for %s',Drugs{iD})
 end
 
-        
+
 fprintf('Number of test wells: %i\n',total_cnt);
 assert(total_cnt<384)
 
@@ -60,7 +60,7 @@ ctrl_cnt = 384 - total_cnt;
 if edge_ctrl
     assert(ctrl_cnt>=12, 'For controls on the edge, need at least 12 controls')
     ctrlpos = zeros(16,24);
-        
+
     if ctrl_cnt<14 % only 6 controls on the edge
         disp('Only 6 control on the edge, would be better with at least 14 controls')
         ctrlpos([1 4 12 16],[7 18])=1;
@@ -69,12 +69,12 @@ if edge_ctrl
         ctrlpos([1 4 12 16],[7 18])=1;
         ctrlpos([5 11],[1 12 24])=1;
     end
-    
+
     if ctrl_cnt>=20 % put the corners as control (should be then discarded)
         ctrlpos([1 end], [1 end]) = 1;
     end
-    
-    if ctrl_cnt>sum(ctrlpos(:))        
+
+    if ctrl_cnt>sum(ctrlpos(:))
         % complete the number of control with randomized positions
         temp = reshape(randperm(16*24),16,24);
         temp(ctrlpos==1) = 384;
@@ -82,8 +82,8 @@ if edge_ctrl
         cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
         ctrlpos(temp<=cutoff) = 1;
     end
-    
-    ctrlidx = find(ctrlpos);    
+
+    ctrlidx = find(ctrlpos);
     assert(ctrl_cnt==length(ctrlidx));
 else
     ctrlidx = find(reshape(randperm(16*24),16,24)<=(ctrl_cnt));
@@ -109,21 +109,21 @@ disp(' ')
 cnt = 1;
 
 for iD = 1:length(Drugs)
-    
+
     % titration
     for iPSDo = 1:length(drugs_struct(iD).SingleDoses)
         drugs_struct(iD).layout(trtidx(cnt)) = drugs_struct(iD).SingleDoses(iPSDo);
         cnt = cnt+1;
     end
-    
-    for iD2 = (iD+1):length(Drugs)        
+
+    for iD2 = (iD+1):length(Drugs)
         % combos
         for iDo = 1:length(drugs_struct(iD).Doses)
-            for iDo2 = 1:length(drugs_struct(iD2).Doses);                
-                drugs_struct(iD).layout(trtidx(cnt)) = drugs_struct(iD).Doses(iDo);                
+            for iDo2 = 1:length(drugs_struct(iD2).Doses);
+                drugs_struct(iD).layout(trtidx(cnt)) = drugs_struct(iD).Doses(iDo);
                 drugs_struct(iD2).layout(trtidx(cnt)) = ...
-                    drugs_struct(iD2).Doses(iDo2);             
-                
+                    drugs_struct(iD2).Doses(iDo2);
+
                  vol = well_volume*((drugs_struct(iD).Doses(iDo)/drugs_struct(iD).nominal_conc)+...
                     (drugs_struct(iD2).Doses(iDo2)/drugs_struct(iD2).nominal_conc))/1000;
                 if vol>max_volumedrop
@@ -134,10 +134,10 @@ for iD = 1:length(Drugs)
                 end
                 cnt = cnt+1;
             end
-        end        
+        end
     end
 end
-        
+
 assert( cnt==length(trtidx)+1)
 
 for iD = 1:length(Drugs)
@@ -154,7 +154,7 @@ end
 
 
     function new_Doses = round_Conc(old_Doses, nominal_conc)
-        
+
         dose_step = 1e3*nominal_conc *min_volumedrop/well_volume;
         dose_max = 1e3*nominal_conc *max_volumedrop/well_volume;
         temp_d = old_Doses;

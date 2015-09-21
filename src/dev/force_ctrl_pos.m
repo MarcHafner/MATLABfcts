@@ -35,4 +35,3 @@ for i=1:length(drugs_struct)
         drugs_struct_out(i).layout(forced_ctrls(j)) = 0;
     end
 end
-

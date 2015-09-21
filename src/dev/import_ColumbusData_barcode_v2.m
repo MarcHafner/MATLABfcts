@@ -9,7 +9,7 @@
 %                       result file (output from Columbus)
 %             FilesLocation.Barcode_table = table with the following
 %                       columns:  Barcode   CellLine    Designfile  Replicate  Untrt   Day0
-%                   
+%
 %                       column value examples:
 %                           Barcode:    MN20140509001
 %                           CellLine:   MDAMB231
@@ -22,7 +22,7 @@
 %             FilesLocation.OutputFile = 'Results_20140310';
 %             [needed in using 'savefile']
 %                       File name for saving the results
-%   
+%
 %  savefile = save results in a file (need FilesLocation.OutputFile)
 %
 
@@ -32,7 +32,7 @@ function [t_CL, Drugs, CellLines] = import_ColumbusData_barcode(FilesLocation, s
 if ~exist('savefile','var'),
     savefile = 0;
 end
-    
+
 fields = {'folder' 'data_file' 'Barcode_table' 'OutputFile'};
 Mandatory = [1   1   1  savefile];
 
@@ -52,7 +52,7 @@ assert(all(ismember({'Barcode' 'CellLine' 'TrtFile' 'DesignNumber'}, ...
 
 t_raw = readtable([folder data_file],'delimiter','\t');
 
-if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warning('wells with missing fields: %i', ...
         unique(t_raw.NumberOfAnalyzedFields))
@@ -71,7 +71,7 @@ assert(length(unique(t_raw.Barcode))>=height(Barcode_table), ...
     length(unique(t_raw.Barcode)), height(Barcode_table));
 
 url = regexp(t_raw.URL,'/','split');
-PlateID = vertcat(url{:}); 
+PlateID = vertcat(url{:});
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
 CellLine = cell(height(t_raw),1);
@@ -84,17 +84,17 @@ Day0 = zeros(height(t_raw),1);
 
 cnt = 0;
 for iBC = 1:height(Barcode_table)
-    
+
     idx = find(strcmp(t_raw.Barcode, Barcode_table.Barcode{iBC}));
     assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
         length(unique(PlateID(idx))))
     assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
-    
+
     CellLine(idx) = {char(Barcode_table.CellLine(iBC))};
     Barcodes(idx) = Barcode_table.Barcode(iBC);
     Trt(idx) = {char(Barcode_table.TrtFile(iBC))};
     Repeat(idx) = {char(Barcode_table.Repeat(iBC))};
-    
+
     if strcmp('Untrt', char(Barcode_table.TrtFile(iBC)))
         Untrt(idx) = 1;
     elseif strcmp('Day0', char(Barcode_table.TrtFile(iBC)))
@@ -102,10 +102,10 @@ for iBC = 1:height(Barcode_table)
     else
         DesignNumber(idx) = Barcode_table.DesignNumber(iBC);
     end
-    
+
     assert(all(DesignNumber(idx)>0 | Untrt(idx)>0 | Day0(idx)>0))
     cnt = cnt+1;
-    
+
 end
 assert(cnt<=length(unique(PlateID)))
 if cnt<length(unique(PlateID))
@@ -135,9 +135,9 @@ for i=1:24
 end
 
 for iCL=1:length(CellLines)
-    
+
     t_CL{iCL} = t_data(t_data.CellLine==CellLines{iCL},:);
-    
+
     for iDe = unique(t_CL{iCL}.DesignNumber)'
         not_measured = ~ismember(welllist, t_CL{iCL}.Well(t_CL{iCL}.DesignNumber==iDe));
         temp = cell2table([repmat(CellLines(iCL), sum(not_measured),1), ...
@@ -148,16 +148,16 @@ for iCL=1:length(CellLines)
         temp = TableToCategorical(temp,[1 5]);
         t_CL{iCL} = [t_CL{iCL};temp];
     end
-    
+
     tempDrugs = {};
     IsPrimary = {};
     SingleDoses = {};
     ComboDoses = {};
     for iDe = find(Barcode_table.CellLine==CellLines(iCL) &...
             Barcode_table.DesignNumber>0)'
-        
+
         load([folder char(Barcode_table.TrtFile(iDe))])
-        
+
         temp = cellfun2(@(x) {x.name}, design(Barcode_table.DesignNumber(iDe)));
         temp = temp{:};
         for i=1:length(temp)
@@ -167,7 +167,7 @@ for iCL=1:length(CellLines)
                     IsPrimary{end+1} = design{Barcode_table.DesignNumber(iDe)}.Primary;
                 end
                 SingleDoses{end+1} = design{Barcode_table.DesignNumber(iDe)}.SingleDoses;
-                
+
                 if isfield(design{Barcode_table.DesignNumber(iDe)},'Doses')
                     ComboDoses{end+1} = design{Barcode_table.DesignNumber(iDe)}.Doses;
                 end
@@ -184,26 +184,26 @@ for iCL=1:length(CellLines)
         Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(tempDrugs)), ...
             'SingleDoses',SingleDoses, ...
             'ComboDoses', ComboDoses);
-    else        
+    else
         Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(tempDrugs)), ...
             'Primary',IsPrimary, ...
             'SingleDoses',SingleDoses, ...
             'ComboDoses', ComboDoses);
     end
-    
-    
+
+
     DrugDoses = zeros(height(t_CL{iCL}),length(tempDrugs));
     t_CL{iCL} = sortrows(t_CL{iCL},{'DesignNumber' 'Column' 'Row'});
-    
+
     for iDe = find(Barcode_table.CellLine==CellLines(iCL) &...
             Barcode_table.DesignNumber>0)'
-         
-        
+
+
         load([folder char(Barcode_table.TrtFile(iDe))])
-        
+
         temp = cellfun2(@(x) {x.name}, design(Barcode_table.DesignNumber(iDe)));
         temp = temp{:};
-        assert(all(ismember(temp, tempDrugs)))      
+        assert(all(ismember(temp, tempDrugs)))
         for iD=1:length(temp)
             idx = sub2ind([16 24], t_CL{iCL}.Row(t_CL{iCL}.DesignNumber==iDe & ~isnan(t_CL{iCL}.Cellcount)), ...
                 t_CL{iCL}.Column(t_CL{iCL}.DesignNumber==iDe & ~isnan(t_CL{iCL}.Cellcount)) );
@@ -211,11 +211,11 @@ for iCL=1:length(CellLines)
                 strcmp(tempDrugs, design{Barcode_table.DesignNumber(iDe)}(iD).name)) = ...
                 design{Barcode_table.DesignNumber(iDe)}(iD).layout(idx);
         end
-        
-        
+
+
     end
-    
-    
+
+
     CtrlIdx = all(DrugDoses==0,2);
     for iDe = setdiff(unique(t_CL{iCL}.DesignNumber), 0)'
         % remove corner as control to avoid bias (only the case if more
@@ -226,10 +226,10 @@ for iCL=1:length(CellLines)
             CtrlIdx(CornerIdx)=0;
         end
     end
-    
+
     t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses CtrlIdx], ...
         'VariableNames',{Drugs{iCL}.DrugName 'Ctrl'})];
-        
+
     t_CL{iCL} = sortrows(t_CL{iCL},{'DesignNumber' 'Column' 'Untrt' ...
         'Day0' 'Ctrl'});
 end

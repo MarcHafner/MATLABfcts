@@ -2,7 +2,7 @@ function export_DrugDesign(Design1, filename, sheet)
 % export_DrugDesign(Design1, filename, sheet)
 %
 %   export a Design structure (not an array) with standard fields for
-%   treatment into tsv file with formated layout. 
+%   treatment into tsv file with formated layout.
 %
 %   Design :    array of design structures with the following fields:
 %                   - plate_dims (plate dimension)
@@ -32,7 +32,7 @@ for i1 = 1:m
     end
 end
 
-for i=1:length(Design1.Drugs)    
+for i=1:length(Design1.Drugs)
     for i1 = 1:m
         for i2 = 1:n
             if Design1.Drugs(i).layout(i1,i2)>0
@@ -48,7 +48,7 @@ for i=1:length(Design1.Drugs)
             end
         end
     end
-    
+
 %     temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).nominal_conc ...
 %         'Volume (nl)=' drugs_struct(i).volume 'Well volume (ul)=' drugs_struct(i).well_volume*1e6 };
 %     if isfield(drugs_struct(i),'Doses')
@@ -60,7 +60,7 @@ for i=1:length(Design1.Drugs)
 %             num2cell(drugs_struct(i).SingleDoses)];
 %     end
 %     total_output(m+2+(i-1)*4+(1:3),1:size(temp,2)) = temp;
-    
+
 end
 
 
@@ -84,4 +84,3 @@ if ~exist('sheet','var')
 end
 
 tsvwrite(filename, total_output, sheet)
-

@@ -1,6 +1,6 @@
 % loop_waitbar(i,imax)
 %   use the function fprintf to display a wait bar for loops.
-%   
+%
 %   i     current loop iteration
 %   imax  number of iterations in the loop
 %

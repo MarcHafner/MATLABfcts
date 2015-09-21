@@ -7,7 +7,7 @@ drugs = struct('DrugName', {}, 'name', {}, 'HMSLid', {}, 'stock_conc', {});
 for design_num = 1:length(design)
     for drug_num = 1:length(design(design_num).Drugs)
         drug = design(design_num).Drugs(drug_num);
-        
+
         DrugName = drug.DrugName;
         HMSLid = drug.HMSLid;
         if ~isempty(HMSLid)
@@ -15,7 +15,7 @@ for design_num = 1:length(design)
         else
             name = DrugName;
         end
-        
+
         stock_conc = drug.stock_conc;
         match = find(strcmp(name, {drugs.name}));
         if ~isempty(match)
@@ -33,7 +33,7 @@ for design_num = 1:length(design)
                 'name', name, ...
                 'HMSLid', HMSLid, ...
                 'stock_conc', stock_conc ...
-            ); 
+            );
         end
     end
 end

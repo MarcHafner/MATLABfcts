@@ -8,14 +8,14 @@ for id = 1:length(dates)
     t_data = Import_PlatesCellCountData(filenames{id}, ...
         ['barcode_' dates{id} '.tsv']);
     %%
-    
+
     t_annotated = Annotate_CellCountData(t_data);
-    
+
     %%
-           
+
     [t_mean, t_processed] = Merge_CellCountData(t_annotated, [], {'plate'}););
-    
+
     %%
-    
+
     save(['data_' dates{id} '.mat'], 't_annotated', 't_mean', 't_processed')
 end

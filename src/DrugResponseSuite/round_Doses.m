@@ -36,7 +36,7 @@ if any( ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*min_dos
     idx = (temp_Doses<mean([min_dose, step_dose])) & (temp_Doses>1.02*min_dose);
     temp_Doses(idx) = min_dose;
     idx = (temp_Doses>mean([min_dose, step_dose])) & (temp_Doses<step_dose/1.02);
-    temp_Doses(idx) = step_dose;    
+    temp_Doses(idx) = step_dose;
     % other cases
     idx = ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*step_dose);
     temp_Doses(idx) = step_dose*round(temp_Doses(idx)/step_dose);
@@ -55,7 +55,7 @@ new_Doses(old_Doses>0) = temp_Doses;
 
 
 function info_flag = write_info(info_flag)
-    if ~info_flag 
+    if ~info_flag
         fprintf('Processing %s (%s doses):\n', DName, tag)
         info_flag = true;
     end

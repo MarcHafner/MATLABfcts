@@ -31,5 +31,3 @@ for i=1:height(t_plateinfo)
         'TreatmentFile should be a .mat, .hpdd, .txt, .tsv file of ''-'' for untreated')
 end
 end
-
-

@@ -9,7 +9,7 @@
 %                       result file (output from Columbus)
 %             FilesLocation.DesignFiles = 'Design_20140307_Exp1_';
 %                       prefix for the treatment desing (e.g.
-%                           Design_20140307_Exp1_MDA231-2.mat) 
+%                           Design_20140307_Exp1_MDA231-2.mat)
 %                       OR list of design files for each replicate and
 %                       cell line (in a form of a cell array):
 %                           {'Design_20140307_Exp1_MDA231.mat'  'Design_20140307_Exp1_HME.mat'
@@ -19,7 +19,7 @@
 %                       Cell line names (prefix for the Design file)
 %             FilesLocation.ColumbusTag = {'HME' '231'};
 %                       Tag used in the Columbus result file for cell lines
-% 
+%
 %             FilesLocation.Replicate_tags = {'drug1' 'drug2' 'drug3'};
 %                       Tag used in the Columbus result file for treatment
 %                       replicates
@@ -27,12 +27,12 @@
 %                       Tag used in the Columbus result file for
 %                       untreated plates (controls)
 %             FilesLocation.Day0_tag = {'day0'};    [optional]
-%                       Tag used in the Columbus result file for 
+%                       Tag used in the Columbus result file for
 %                       plates fixed at the day of treatment.
 %             FilesLocation.OutputFile = 'Results_20140310';
 %             [needed in using 'savefile']
 %                       File name for saving the results
-%   
+%
 %  savefile = save results in a file (need
 
 
@@ -41,7 +41,7 @@ function [t_CL, Drugs, CellLines] = import_ColumbusData(FilesLocation, savefile)
 if ~exist('savefile','var'),
     savefile = 1;
 end
-    
+
 fields = {'folder' 'data_file' 'DesignFiles'  'CellLines' ...
     'ColumbusTag' 'Replicate_tags' 'Untrt_tag' 'Day0_tag' 'OutputFile'};
 Mandatory = [1   1   1   1         1   1  0   0  savefile];
@@ -70,7 +70,7 @@ end
 
 t_raw = readtable([folder data_file],'delimiter','\t');
 
-if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warning('wells with missing fields: %i', ...
         unique(t_raw.NumberOfAnalyzedFields))
@@ -79,7 +79,7 @@ if length(unique(t_raw.NumberOfAnalyzedFields))>1
             (Nref/t_raw.NumberOfAnalyzedFields(i));
     end
 end
-    
+
 
 allExp = [Replicate_tags Untrt_tag Day0_tag];
 
@@ -90,7 +90,7 @@ assert(length(unique(t_raw.Result))>=...
     length(unique(t_raw.Result)), length(CellLines), length(allExp));
 
 url = regexp(t_raw.URL,'/','split');
-PlateID = vertcat(url{:}); 
+PlateID = vertcat(url{:});
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
 CellLine = cell(size(t_raw.Result));
@@ -101,26 +101,26 @@ Day0 = zeros(size(t_raw.Result));
 cnt = 0;
 for iCL = 1:length(CellLines)
     for iR = 1:length(allExp)
-        
+
         idx = find(strfindcell(t_raw.Result, ColumbusTag{iCL})>0 & ...
             strfindcell(t_raw.Result, allExp{iR})>0);
         assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
             length(unique(PlateID(idx))))
         assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
-        
+
         CellLine(idx) = CellLines(iCL);
         if ismember(allExp{iR}, Replicate_tags)
             Replicate(idx) = find(strcmp(allExp{iR}, Replicate_tags));
         end
-        
+
         if ismember(allExp{iR}, Untrt_tag)
             Untrt(idx) = find(strcmp(allExp{iR}, Untrt_tag));
         end
-        
+
         if ismember(allExp{iR}, Day0_tag)
             Day0(idx) = find(strcmp(allExp{iR}, Day0_tag));
         end
-        
+
         assert(all(Replicate(idx)>0 | Untrt(idx)>0 | Day0(idx)>0))
         cnt = cnt+1;
     end
@@ -146,29 +146,29 @@ t_CL = cell(1,length(CellLines));
 Drugs = t_CL;
 
 for iCL=1:length(CellLines)
-    
+
     t_CL{iCL} = t_data(t_data.CellLine==CellLines{iCL},:);
     if iscell(DesignFiles)
-        load([folder DesignFiles{iCL,1}])        
+        load([folder DesignFiles{iCL,1}])
     else
         load([folder DesignFiles CellLines{iCL} '-1.mat'])
     end
     Drugs{iCL} = {drugs_struct.name};
-    
+
     DrugDoses = NaN(height(t_CL{iCL}),length(Drugs{iCL}));
     t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Row'});
-    for iR = setdiff(unique(t_data.Replicate), 0)'        
+    for iR = setdiff(unique(t_data.Replicate), 0)'
         if iscell(DesignFiles)
             load([folder DesignFiles{iCL,iR}])
         else
             load([folder DesignFiles CellLines{iCL} '-' num2str(iR) '.mat'])
         end
-        assert(all(strcmp(Drugs{iCL}, {drugs_struct.name})))        
+        assert(all(strcmp(Drugs{iCL}, {drugs_struct.name})))
         for iD=1:length(Drugs{iCL})
             DrugDoses(t_CL{iCL}.Replicate==iR,iD) = drugs_struct(iD).layout(:);
         end
     end
-    
+
     if isfield(drugs_struct,'Primary')
         Drugs{iCL} = struct('DrugName',ReducName(Drugs{iCL}), ...
             'Primary',{drugs_struct.Primary}, ...
@@ -182,7 +182,7 @@ for iCL=1:length(CellLines)
             Drugs{iCL}(i).ComboDoses = drugs_struct(i).Doses;
         end
     end
-    
+
     CtrlIdx = all(DrugDoses==0,2);
     for iR = setdiff(unique(t_CL{iCL}.Replicate), 0)'
         % remove corner as control to avoid bias (only the case if more
@@ -194,10 +194,10 @@ for iCL=1:length(CellLines)
             CtrlIdx(CornerIdx)=0;
         end
     end
-    
+
     t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses CtrlIdx], ...
         'VariableNames',{Drugs{iCL}.DrugName 'Ctrl'})];
-        
+
     t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Untrt' ...
         'Day0' 'Ctrl'});
 end

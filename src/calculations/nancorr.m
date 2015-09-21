@@ -5,7 +5,7 @@ function [r,p,n] = nancorr(X,Y,type)
 %
 %   type is the correlation metric as defined by MATLAB
 %   function can also be called as   nancorr(X, type)
-%   
+%
 %   r is the correlation coefficient, p is the significance and n the
 %   number of samples used for calculating each pairwise correlation
 %   r, p, n have a size nxn (for a single input X with n columns) or nxm
@@ -23,19 +23,19 @@ end
 
 if exist('Y','var')
     assert(any(size(X)==size(Y)), ...
-        'X and Y should be column vectors or matrices with the same number of rows')    
+        'X and Y should be column vectors or matrices with the same number of rows')
     maxi = size(X,2);
     minj = size(X,2)+1;
     X = [X Y];
-    
+
 else
     maxi = size(X,2);
     minj = 2;
-    
+
 end
 
 r = NaN(size(X,2));
-p = r; 
+p = r;
 n = zeros(size(X,2));
 for i=1:maxi
     if all(isnan(X(:,i)))
@@ -43,7 +43,7 @@ for i=1:maxi
     end
     idx1 = ~isnan(X(:,i));
     n(i,i) = sum(idx1);
-    r(i,i) = 1; 
+    r(i,i) = 1;
     if strcmp(type,'pearson')
         p(i,i)= 0;
     else

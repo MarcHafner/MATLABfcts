@@ -1,7 +1,7 @@
 function [DrugNames, HMSLids] = splitHMSLid(DrugNames)
 
 iscat = iscategorical(DrugNames);
-if iscat    
+if iscat
     DrugNames = cellstr(DrugNames);
     DrugNames(strcmp(DrugNames, '<undefined>')) = {''};
 end

@@ -78,10 +78,10 @@ end
 h_RowBars = cell(size(rowannotations,2),1);
 for iR = 1:size(rowannotations,2)
     get_newaxes([outerpos(1)+(iR-1)*p.rowbarwidth innerpos(2) p.rowbarwidth-.005 innerpos(4)],1)
-    
+
     h_RowBars{iR} = [];
     cases = unique(rowannotations.(iR));
-    
+
     if isfield(PO, rowannotations.Properties.VariableNames{iR}) && ...
             isfield(PO, [rowannotations.Properties.VariableNames{iR} 'Colors'])
         colors = NaN(length(cases), 3);
@@ -96,13 +96,13 @@ for iR = 1:size(rowannotations,2)
     else
         colors = gray(length(cases));
     end
-    
+
     for i = 1:length(cases)
         idx = find(rowannotations.(iR)(permRows)==cases(i));
         h_RowBars{iR}(i) = barh([-2;-3;idx], ones(length(idx)+2,1), 1, ...
             'linestyle','none','facecolor', colors(i,:));
     end
-    
+
     set(gca,'ytick',[],'xtick',.5,'xticklabel',rowannotations.Properties.VariableNames{iR}, ...
         PO.axislabel{:},'xticklabelrotation',90)
     xlim([.2 .8])
@@ -128,10 +128,10 @@ end
 h_ColBars = cell(size(columnannotations,2),1);
 for iR = 1:size(columnannotations,2)
     get_newaxes([innerpos(1) outerpos(2)+outerpos(4)-iR*p.colbarwidth+.005 innerpos(3) p.colbarwidth-.005],1)
-    
+
     h_ColBars{iR} = [];
     cases = unique(columnannotations.(iR));
-    
+
     if isfield(PO, columnannotations.Properties.VariableNames{iR}) && ...
             isfield(PO, [columnannotations.Properties.VariableNames{iR} 'Colors'])
         colors = NaN(length(cases), 3);
@@ -146,13 +146,13 @@ for iR = 1:size(columnannotations,2)
     else
         colors = gray(length(cases));
     end
-    
+
     for i = 1:length(cases)
         idx = find(columnannotations.(iR)(permCols)==cases(i));
         h_ColBars{iR}(i) = bar([-2;-3;idx], ones(length(idx)+2,1), 1, ...
             'linestyle','none','facecolor', colors(i,:));
     end
-    
+
     set(gca,'xtick',[],'ytick',.5,'yticklabel',columnannotations.Properties.VariableNames{iR}, ...
         PO.axislabel{:})
     ylim([.2 .8])

@@ -8,6 +8,3 @@ if nargin==1
 elseif nargin==2
     [r,p] = corr(x,y,'type','spearman');
 end
-
-
-

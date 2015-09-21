@@ -68,7 +68,7 @@ if length(p.markers)==1, p.markers=repmat(p.markers,1,nData); end
 
 if isempty(p.xcenters)
     p.xcenters = [quantile([xvals{:}],.01) quantile([xvals{:}],.99)] ;
-    p.xcenters = p.xcenters(1):(diff(p.xcenters)/200):p.xcenters(2);    
+    p.xcenters = p.xcenters(1):(diff(p.xcenters)/200):p.xcenters(2);
 end
 if isempty(p.xwidth)
     p.xwidth = 1.5*diff(p.xcenters(1:2));
@@ -76,7 +76,7 @@ end
 
 if isempty(p.ycenters)
     p.ycenters = [quantile([yvals{:}],.01) quantile([yvals{:}],.99)] ;
-    p.ycenters = p.ycenters(1):(diff(p.ycenters)/200):p.ycenters(2);    
+    p.ycenters = p.ycenters(1):(diff(p.ycenters)/200):p.ycenters(2);
 end
 if isempty(p.ywidth)
     p.ywidth = 1.5*diff(p.ycenters(1:2));
@@ -118,4 +118,3 @@ end
 xlim([0 1.1*maxf])
 ylim(ylims)
 set(gca, Plotting_parameters.axes{:}, 'xtick', [])
-

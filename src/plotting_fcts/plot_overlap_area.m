@@ -44,5 +44,3 @@ ha(3) = patch(pi(:,1), pi(:,2), colors(3,:));
 hl = line(p1(:,1), p1(:,2), 'color', linecolors(1,:), varargin{:});
 hl(2) = line(p2(:,1), p2(:,2), 'color', linecolors(2,:), varargin{:});
 hl(3) = line(pi(:,1), pi(:,2), 'color', linecolors(3,:), varargin{:});
-
-        

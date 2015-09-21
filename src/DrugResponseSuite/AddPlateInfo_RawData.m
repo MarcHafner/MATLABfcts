@@ -1,5 +1,5 @@
-function t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p) 
-% t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p); 
+function t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p)
+% t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p);
 %
 %   Incoporate the plate info to the data imported from the instrument
 %
@@ -9,10 +9,10 @@ function t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p)
 %       - p.TimeCourse
 %       - p.T0date:    Input alternative to T0shift for timecourse:
 %                       date and time of the treatment
-%                      p.T0date is overwritten by information in the plateID file 
+%                      p.T0date is overwritten by information in the plateID file
 %       - p.T0shift:   [0.25 h] Different in hours between the
 %                       first plate imaged and the treatment
-%       
+%
 
 if ~isvariable(t_raw, 'Cellcount')
     t_raw = DefineCellcount(t_raw, NobjField, p);
@@ -48,9 +48,9 @@ Untrt = false(height(t_raw),1);
 cnt = 0;
 % join the barcode table to t_raw with a few controls
 for iBC = 1:height(t_plateinfo)
-    
+
     idx = find(strcmp(t_raw.Barcode, t_plateinfo.Barcode{iBC}));
-    if isempty(idx)        
+    if isempty(idx)
         idx = find(strfindcell(t_raw.Barcode, t_plateinfo.Barcode{iBC}));
         if isempty(idx)
             warnprintf('No result found for plate %s', t_plateinfo.Barcode{iBC})
@@ -58,12 +58,12 @@ for iBC = 1:height(t_plateinfo)
             warnprintf('Partial barcode match for plate %s', t_plateinfo.Barcode{iBC})
         end
     end
-    
+
     CellLine(idx) = t_plateinfo.CellLine(iBC);
     Barcode(idx) = t_plateinfo.Barcode(iBC);
     TreatmentFile(idx) = t_plateinfo.TreatmentFile(iBC);
     [~,~,ext] = fileparts(t_plateinfo.TreatmentFile{iBC});
-    
+
     if (strcmp(ext,'.mat') || strcmp(ext,'.hpdd'))
         assert(isvariable(t_plateinfo,'DesignNumber'), ...
             'Treatment files .mat or .hpdd needs a DesignNumber column')
@@ -90,12 +90,12 @@ for iBC = 1:height(t_plateinfo)
     else
         Time(idx) = t_plateinfo.Time(iBC);
     end
-    
+
     % parse the additional plate information from the barcode file
     for i = 1:length(otherVariables)
         eval([otherVariables{i} '(idx) = t_plateinfo.' otherVariables{i} '(iBC);'])
     end
-    
+
     cnt = cnt+1;
 end
 
@@ -137,7 +137,7 @@ if ~isempty(otherVariables)
             fprintf(['\tReplacing variable(s): ' otherVariables{i} ' by value in Plate info file\n'])
             eval(['t_data = [t_data(:,setdiff(varnames(t_data),''' otherVariables{i} ''',''stable''))'...
                 ' table(' otherVariables{i} ')];'])
-        else            
+        else
             fprintf(['\tAdding variable(s): ' otherVariables{i} ' from Plate info file\n'])
             eval(['t_data = [t_data'...
                 ' table(' otherVariables{i} ')];'])

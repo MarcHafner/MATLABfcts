@@ -24,7 +24,7 @@ elseif idx==0
     end
 else
     filenames = dir([HomeFolder filesep folders{floor(abs(idx))} '/*.m']);
-    
+
     fprintf('\nFolder %s (%i)\n', folders{floor(abs(idx))}, floor(abs(idx)));
     filenames = {filenames.name}';
     if floor(abs(idx))==abs(idx)
@@ -41,4 +41,3 @@ else
         help(filenames{j})
     end
 end
-

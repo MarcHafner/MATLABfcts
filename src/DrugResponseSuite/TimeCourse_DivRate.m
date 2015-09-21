@@ -40,7 +40,7 @@ t_rate = table();
 for it = 1:height(t_location)
     % get all time points for each well
     t_temp = sortrows(t_data(eqtable(t_data(:,trace_vars), t_location(it,:)),:),'Time');
-    
+
     t_temp = [t_temp(1,:); t_temp];
     t_temp.Time(1) = 0;
     if isvariable(t_temp, 'Day0Cnt')
@@ -82,3 +82,5 @@ if isvariable(t_rate, 'pert_type')
         max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
 end
 
+t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
+    max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);

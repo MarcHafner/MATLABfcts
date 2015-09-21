@@ -189,10 +189,10 @@ assert(all(any(allTreatments>0)))
 
 %% assign the design for each replicate
 for iR = 1:nReps
-    
+
     Designs(iR).Drugs = RandomizePlatePositions(Designs(iR).Drugs, ...
         allTreatments, nWells, p.plate_dims, ctrlidx, ctrl_cnt, p.Seed+iR-1);
-    
+
     allDrugs = reshape([Designs(iR).Drugs.layout], [p.plate_dims length(DrugNames)]);
     nDrugs = sum(allDrugs>0,3);
     assert(all(squeeze(sum(sum((allDrugs>0).*repmat(nDrugs==1,1,1,length(DrugNames)),2),1))==...
@@ -202,12 +202,9 @@ for iR = 1:nReps
             (length(p.ComboLists{iCo,1})*length(p.ComboLists{iCo,2})*...
             sum(all(p.DrugPairs==(ones(size(p.DrugPairs,1),1)*p.DrugPairs(iCo,:)),2))))
     end
-    
-    
-end
 
 
 end
 
 
-
+end

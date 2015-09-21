@@ -9,11 +9,11 @@ output = ['Drug Name' 'HMSL id' 'Stock (mM)' ...
     strcat({experiment.name}, ' (ul)') 'Total volume (ul)'];
 
 for iS = 1:length(experiment)
-    
+
     for i=1:length(experiment(iS).plate_map)
         t_Drug = experiment(iS).plate_map(i).name;
         Didx = find(strcmp(Drugs, t_Drug));
-    
+
         stock_conc = experiment(iS).plate_map(i).nominal_conc;
         volume = experiment(iS).plate_map(i).volume;
         volume_str = num2str(volume/1e3,'%.2f');
@@ -42,7 +42,7 @@ end
 for i=1:length(Drugs)
     output{i+1,end} = num2str(ceil(sum(Volume(i,:)/100))/10,'%.1f');
 end
-            
-    
+
+
 %%
 tsvwrite(filename, output, 'summary_drugs');

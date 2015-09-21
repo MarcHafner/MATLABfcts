@@ -4,14 +4,14 @@ function [fit_output, B, r2, chosen_q2, details, ...
 % function [fit_output, B, r2, chosen_q2, details, ...
 %     fit_output_vip, B_vip, r2_vip, chosen_q2_vip, details_vip] = ...
 %     LV1outCV_PLSRvip(Inputs, Outputs, opt)
-%	
+%
 %   opt :
-%         nComps 
-%         nCore 
-%         nComps2 
+%         nComps
+%         nCore
+%         nComps2
 %         allVIPthres
 %
-%   
+%
 %       doVIP = nargout>4;
 %       useVIP = nargout>5;
 %
@@ -85,15 +85,15 @@ end
 
 parfor (iCL=1:nCL, nCore)
 %     for iCL=1:nCL
-    
+
     testidx = setdiff(1:nCL,iCL);
-    
+
     shiftInputs = mean(Inputs(testidx,:));
     NormInput = Inputs(testidx,:)-repmat(shiftInputs,nCL-1,1);
-    
+
     shiftOutputs = mean(Outputs(testidx));
     NormOutputs = Outputs(testidx)-shiftOutputs;
-    
+
     if all(abs(NormOutputs)<1e-10)
         allPredOutputs(iCL,:) = shiftOutputs*ones(1,length(nComps));
         if useVIP
@@ -102,9 +102,9 @@ parfor (iCL=1:nCL, nCore)
         end
         continue
     end
-    
+
     [~,YL,XS,~,~,W] = plsregress_simpls(NormInput, NormOutputs, max(nComps));
-    
+
     R2 = zeros(max(nComps),1);
     nWei = zeros(1,max(nComps));
     if doVIP
@@ -117,36 +117,36 @@ parfor (iCL=1:nCL, nCore)
                 end;end
         end
     end
-    
+
     tnVar_vip = zeros(length(nComps),nVIP,length(nComps2),'single');
     tallPredOutputs_vip = zeros(length(nComps),nVIP,length(nComps2),'single');
     tallbeta = zeros(size(Inputs,2),length(nComps));
     tallVIP = tallbeta;
     tallPredOutputs = NaN(1,length(nComps));
-    
-    
+
+
     for j=1:length(nComps)  % prediction for the different number of components
         n = nComps(j);
-        
+
         beta = W(:,1:n)*YL(:,1:n)';
         tallbeta(:,j) = beta;
         tallPredOutputs(j) = ( Inputs(iCL,:) -shiftInputs)*beta + shiftOutputs;
-        
+
         tVIP = zeros(nVar,1);
         %%%%%%% runing the optimization of the Inputs using the VIP
         if doVIP
-            
+
             % calculating the VIP for the training set
             for i=1:nVar
                 tVIP(i) = sqrt( nVar* (((W(i,1:n)./nWei(1:n)).^2)*R2(1:n)) /sum(R2(1:n)) );
             end
             % recording the VIP
             tallVIP(:,j) = tVIP;
-            
+
         end % end of the VIP
-        
+
         if useVIP
-            
+
             for i = 1:nVIP
                 VIPselected = (tVIP >= allVIPthres(i));
                 if ~any(VIPselected)
@@ -154,7 +154,7 @@ parfor (iCL=1:nCL, nCore)
                 end
                 tnComp = max(1,min(max(nComps2),(rank(NormInput(:,VIPselected))-3)));
                 [~,YL2,~,~,~,W2] = plsregress_simpls(NormInput(:,VIPselected), NormOutputs, tnComp);
-                
+
                 for n2=intersect(1:tnComp,nComps2)  % prediction for the different number of components
                     k = find(nComps2==n2);
                     beta = W2(:,1:n2)*YL2(:,1:n2)';
@@ -164,16 +164,16 @@ parfor (iCL=1:nCL, nCore)
                         *beta + shiftOutputs;
                 end
             end
-            
+
         end
     end
-    
+
     allPredOutputs(iCL,:) = tallPredOutputs;
     if useVIP
         allPredOutputs_vip(iCL,:,:,:) = tallPredOutputs_vip;
         nVar_vip(iCL,:,:,:) = tnVar_vip;
     end
-    
+
 end
 
 allMSE = zeros(1,length(nComps));
@@ -198,7 +198,7 @@ r2 = 1 -  sum( (fit_output-Outputs).^2 ) /SSquares;
 
 if doVIP
     optnComp = details.optnComp;
-    
+
     % generate the full model without leave-1-out
     R2 = zeros(optnComp,1);
     nWei = zeros(1,optnComp);
@@ -231,8 +231,8 @@ if useVIP
             end
         end
     end
-   
-    
+
+
     % chossign the parameter as minimal # of VIP then minimal number of
     % Components
     VIPidx = [];
@@ -272,16 +272,16 @@ if useVIP
         nidx = min(size(allMSE_vip,1),2);
         n2idx = min(size(allMSE_vip,3),2);
     end
-    
-        
+
+
     details_vip.nVar_vip = nVar_vip;
     details_vip.allMSE_vip = allMSE_vip;
     details_vip.optnComp = nComps(nidx);
     details_vip.VIPcutoff = allVIPthres(VIPidx);
     details_vip.optnComp2 = nComps2(n2idx);
-    
+
     chosen_q2_vip = 1 - allMSE_vip(nidx, VIPidx, n2idx) / SSquares;
-    
+
     % generating the final model
     % generate the full model without leave-1-out
     [~,YL,XS,~,~,W] = plsregress_simpls(NormInput, NormOutputs, details_vip.optnComp);
@@ -302,10 +302,10 @@ if useVIP
     for i=1:nVar
         details_vip.VIP(i) = sqrt( nVar* (((W(i,:)./nWei).^2)*R2) /sum(R2) );
     end
-    
+
     Varselected = (details_vip.VIP >= details_vip.VIPcutoff);
     if sum(Varselected)>0
-        
+
         if details_vip.optnComp2>=rank(NormInput(:,Varselected))
             details_vip.optnComp2 = max(1,rank(NormInput(:,Varselected))-1);
         end
@@ -324,11 +324,11 @@ if useVIP
         B_vip = 0*B;
         B_vip(Varselected) = W*YL';
         fit_output_vip = NormInput(:,Varselected)*(W*YL') + mean(Outputs);
-    
+
     else
         B_vip = 0*B;
         fit_output_vip = mean(Outputs);
     end
-        
+
     r2_vip = 1 -  sum( (fit_output_vip-Outputs).^2 ) /SSquares;
 end

@@ -1,7 +1,7 @@
 
 function t_mean = Merge_CellCountData(t_processed, plate_inkeys, ...
     cond_inkeys, plate_reps, numericfields)
-% [t_mean, t_processed] = Merge_CellCountData(t_processed, plate_inkeys, cond_inkeys, 
+% [t_mean, t_processed] = Merge_CellCountData(t_processed, plate_inkeys, cond_inkeys,
 %                               plate_reps, numericfields)
 %
 %   process the data from cell count. The data will be split for controls according
@@ -71,24 +71,24 @@ Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_processe
 % loop through the different plates
 for iP = 1:height(t_plate)
     %
-    
+
     t_conditions = t_processed(eqtable(t_processed, t_plate(iP,:)),:);
-    
-    
+
+
     %%%%%%%%% maybe move that part out of the loop if there are
     %%%%%%%%% corresponding replicates from different plates
-    
+
     % collapse the replicates
     temp = collapse(t_conditions(ismember(t_conditions.pert_type, {'trt_cp' 'trt_poscon'}),:), ...
         @mean, 'keyvars', [plate_keys cond_keys], ...
         'valvars', [Relvars {'Cellcount' 'Ctrlcount'} numericfields]);
     ht = height(temp);
-    
+
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
         [strcat('Ctrl_', numericfields) labelfields numericfields {'Ctrlcount'}])),'stable');
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
-    
+
     assert(height(temp)<=ht, 'merging failed; need to debug')
     assert(plate_reps || height(temp)==ht, ['Some replicates have been merged accidentally,' ...
         ' this may be due to replicate on the same plate (set plate_reps=true), or use ''cond_inkeys'''])

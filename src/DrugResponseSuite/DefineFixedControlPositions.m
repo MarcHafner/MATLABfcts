@@ -21,13 +21,13 @@ if ctrl_cnt >= (sum(4*plate_dims)-16 +6) % remove two edges --> not treated
     fixedctrlpos(:, [1 2 end-1 end]) = true;
     treated_wells([1 2 end-1 end], :) = false;
     treated_wells(:, [1 2 end-1 end]) = false;
-    
+
 elseif ctrl_cnt >= (sum(2*plate_dims)-4 +6) % remove all edges --> not treated
     fixedctrlpos([1 end], :) = true;
     fixedctrlpos(:, [1 end]) = true;
     treated_wells([1 end], :) = false;
     treated_wells(:, [1 end]) = false;
-    
+
 elseif ctrl_cnt>=20 % put the corners as control (should be then discarded)
     fixedctrlpos([1 end], [1 end]) = true;
 end

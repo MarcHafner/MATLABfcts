@@ -2,7 +2,7 @@ function pos = regexpcell(strcell, expression)
 % pos = regexpcell(strcell,expression)
 %   find the position of a expression expression in a cell of strings
 %   strcell.
-%   return the vector pos of the same length as strcell 
+%   return the vector pos of the same length as strcell
 %   containing the pos(i) of expression in strcell{i} or 0 if the
 %   expression doesn't match strcell
 %

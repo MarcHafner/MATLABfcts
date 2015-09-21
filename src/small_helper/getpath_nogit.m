@@ -8,4 +8,3 @@ pathlist = temp{1};
 for i=2:length(temp)
     pathlist = [pathlist ';' temp{i}];
 end
-

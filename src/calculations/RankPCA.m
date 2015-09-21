@@ -26,7 +26,3 @@ clear ranked
 explained = 100*latent/sum(latent);
 
 scores = (data-repmat(mean(data),size(data,1),1))*coeff;
-
-
-
-

@@ -13,8 +13,8 @@ if isempty(vNames)
 end
 
 if hB==1 % if necessary, swap the variables such that A is the variable with one row
-    hB = hA; hA = 1; 
-    tempA = B; B = A; A = tempA; 
+    hB = hA; hA = 1;
+    tempA = B; B = A; A = tempA;
 end
 
 idx = true(hB,1);
@@ -25,10 +25,10 @@ for i=1:length(vNames)
     else tempA = A.(vNames{i});
     end
     tempB = B.(vNames{i});
-        
+
     if iscategorical(tempA) || iscategorical(tempB) || ...
             (isnumeric(tempA) && isnumeric(tempB)) || ...
-            (islogical(tempA) && islogical(tempB)) 
+            (islogical(tempA) && islogical(tempB))
         % numeric case (much faster)
         idx = idx & (tempA==tempB);
     else

@@ -1,6 +1,6 @@
 % eample final processing
 
-final_data = filter_DeltaMOMP(compiled_data);    
+final_data = filter_DeltaMOMP(compiled_data);
 
 % example for choosing some conditions
 Idx = find(final_data.ExpKey.TRAIL==25 & final_data.ExpKey.ABT==0 );

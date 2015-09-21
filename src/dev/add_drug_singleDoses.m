@@ -6,7 +6,7 @@ new_drug_struct.volume = new_drug_struct.well_volume*sum(new_drug_struct.SingleD
         (1e3*new_drug_struct.nominal_conc);
 new_drug_struct.Doses = [];
 new_drug_struct.layout = zeros(16,24);
-    
+
 
 drugs = NaN(16,24,length(drugs_struct));
 for i=1:length(drugs_struct)

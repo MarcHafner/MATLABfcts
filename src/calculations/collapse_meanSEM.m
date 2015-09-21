@@ -16,7 +16,7 @@ else
 end
 if exist('valvars','var') && ~isempty(valvars) && (iscellstr(valvars) || ischar(valvars))
     validx = find(ismember(t_in.Properties.VariableNames, valvars));
-else   
+else
     validx = setdiff(1:size(t_in,2), keyidx);
     validx = validx(all(cell2mat(cellfun2(@(x) isnumeric(x) && isscalar(x), ...
         table2cell(t_in(1:min(end,5), validx))))));

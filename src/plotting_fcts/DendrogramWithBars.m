@@ -1,7 +1,7 @@
 function [axis_handles, bar_handles, outperm, groups, dendo_handles] = ...
     DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
   PlotOptions, colorthreshold, linkagetype)
-% function [axis_handles, bar_handles, outperm, groups, dendo_handles] = 
+% function [axis_handles, bar_handles, outperm, groups, dendo_handles] =
 %       DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
 %           PlotOptions, colorthreshold, linkagetype)
 %
@@ -54,16 +54,16 @@ groups = ones(height(t_SampleLabels),1);
 cnt = 1;
 for iF = 1:length(fields)
     axis_handles(iF+1) = get_newaxes([AxisPos(1)+AxisPos(3)+(iF-1)*xwidth AxisPos(2) xwidth AxisPos(4)],1);
-    
+
     temp = t_SampleLabels.(fields{iF});
     temp = temp(outperm);
-    
+
     for i=1:length(PlotOptions.(fields{iF}))
         idx = find(strcmp(cellstr(temp),PlotOptions.(fields{iF})(i)));
         bar_handles{iF}(i) = barh([-2;-1;idx], ones(size(idx,1)+2,1), 1, 'facecolor', ...
             PlotOptions.([fields{iF} 'Colors'])(i,:), 'linestyle','none');
     end
-    
+
     if exist('SampleColor','var')
         for i = find(any(diff(SampleColor,1)~=0,2))'
             plot([0 1], [i i]+.5, '-k')
@@ -71,7 +71,7 @@ for iF = 1:length(fields)
             groups((i+1):end) = cnt;
         end
     end
-    
+
     ylim([.5 length(labels)+.5])
     xlim([.1 .9])
     set(gca,'xtick',[],'ytick',[])

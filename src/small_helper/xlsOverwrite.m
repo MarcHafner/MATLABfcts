@@ -30,7 +30,7 @@ end
 excelObj = actxserver('Excel.Application');
 
 try % save condition to ensure that the Excel session is closed even if crashing
-    
+
     excelWorkbook = excelObj.workbooks.Open(fileName);
     worksheets = excelObj.sheets;
     sheetIdx = 1;
@@ -38,7 +38,7 @@ try % save condition to ensure that the Excel session is closed even if crashing
     numSheets = worksheets.Count;
     % Prevent beeps from sounding if we try to delete a non-empty worksheet.
     excelObj.EnableSound = false;
-    
+
     if newfile==0
         % find if the sheet already exist and clear it
         for i=1:numSheets
@@ -46,25 +46,25 @@ try % save condition to ensure that the Excel session is closed even if crashing
                 worksheets.Item(i).Cells.ClearContents;
             end
         end
-        
+
         % write the data in the sheet, but need to close it before
-        
+
         excelWorkbook.Save;
         excelWorkbook.Close;
-        
+
         xlswrite(fileName,data,sheet);
-        
+
         excelWorkbook = excelObj.workbooks.Open(fileName);
         worksheets = excelObj.sheets;
-        
+
     end
-    
+
     sheetIdx = 1;
     sheetIdx2 = 1;
     numSheets = worksheets.Count;
     % Prevent beeps from sounding if we try to delete a non-empty worksheet.
     excelObj.EnableSound = false;
-    
+
     % remove the empty sheets: loop over all sheets
     while sheetIdx2 <= numSheets
         % Saves the current number of sheets in the workbook
@@ -91,14 +91,12 @@ try % save condition to ensure that the Excel session is closed even if crashing
     excelWorkbook.release;
     excelObj.Quit;
     excelObj.delete;
-    
+
 catch err
     % in case of error, close the EXCEL session and throw error.
     excelObj.Quit;
     excelObj.delete;
-    
+
     rethrow(err);
-    
+
 end
-
-

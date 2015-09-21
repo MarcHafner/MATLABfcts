@@ -51,12 +51,12 @@ t_ctrl = t_in(t_in.pert_type=='ctl_vehicle',:);
 biased = false;
 if any(t_ctrl.Row==1) && any(t_ctrl.Column==1) && ...
         mod(log2(max(t_ctrl.Row)),1)==0 && mod(log2(max(t_ctrl.Column/3)),1)==0
-    
+
     edge_ctrl_idx = t_ctrl.Row==1 | t_ctrl.Column==1 | t_ctrl.Row==max(t_in.Row) ...
         | t_ctrl.Column==max(t_in.Column);
     edge_idx = t_in.Row==1 | t_in.Column==1 | t_in.Row==max(t_in.Row) ...
         | t_in.Column==max(t_in.Column);
-    
+
     for iFields = [{'Cellcount'} setdiff(numericfields, 'Cellcount')]
         edge_vals = t_ctrl.(iFields{:})(edge_ctrl_idx);
         center_vals = t_ctrl.(iFields{:})(~edge_ctrl_idx);
@@ -76,9 +76,9 @@ if any(t_ctrl.Row==1) && any(t_ctrl.Column==1) && ...
                 strjoin(table2cellstr(t_plateinfo,0),'/'), ratio, pval )
         end
     end
-    
-    
-    
+
+
+
 else
     fprintf('\t . No correc. for  (controls not on all edges)\n', ...
         strjoin(table2cellstr(t_plateinfo,0),'/'))
@@ -87,10 +87,10 @@ end
 
 
 if plotting==1 || (plotting==.5 && biased)
-    
+
     plate = table_to_ndarray(t_in, 'keyvars', {'Row' 'Column'}, ...
         'outer', 1, 'valvars',  'Cellcount');
-    
+
     get_newfigure(999, [40 100 400 300])
     get_newaxes([.1 .1 .85 .85])
     imagesc(plate(:,:,1), [0 max(max(plate(:,:,1)))])
@@ -102,5 +102,3 @@ if plotting==1 || (plotting==.5 && biased)
     end
 end
 end
-
-

@@ -11,4 +11,3 @@ Process_data = Process_trajectories(MOMP_data);
 
 %%
 Fitted_data = FitQuadratic(Process_data);
-

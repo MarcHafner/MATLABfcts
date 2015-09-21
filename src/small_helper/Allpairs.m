@@ -19,7 +19,7 @@ if nargin==1
 else
     assert(isvector(vec1) && isvector(vec2), 'Need a 2 column matrix or 2 vectors')
 end
-            
+
 
 [p,q] = meshgrid(vec1, vec2);
 pairs = [p(:) q(:)];

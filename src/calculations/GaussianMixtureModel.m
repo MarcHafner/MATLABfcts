@@ -16,8 +16,8 @@ p = inputParser;
 
 addParameter(p,'plotting',false, @islogical);
 addParameter(p,'useAIC',false,  @islogical);
-addParameter(p,'nGaussMax',6, @isnumeric);     
-addParameter(p,'RegularizeValue',[], @isnumeric);     
+addParameter(p,'nGaussMax',6, @isnumeric);
+addParameter(p,'RegularizeValue',[], @isnumeric);
 
 parse(p, varargin{:})
 p = p.Results;
@@ -52,16 +52,16 @@ for i=1:nGaussMax
         usedIC(i) = obj.BIC;
     end
 
-    if plotting 
+    if plotting
         disp(['Iteration ' num2str(i) ': AIC=' num2str(obj.AIC) ' ; BIC=' num2str(obj.BIC)])
     end
-    
+
     if i>0 && usedIC(i)<bestIC
         bestIC = usedIC(i);
         bestfit = obj;
         Ngauss = i;
     end
-    
+
     if i>3 && all(usedIC(i)>usedIC(i-[1:2]))
         break
     end
@@ -73,8 +73,8 @@ warning('on','stats:gmdistribution:FailedToConvergeReps')
 
 if plotting
     washold = ishold;
-    
-    
+
+
     X1 = (min(data)-.3*delta):(delta/max(10,sqrt(length(data)))):(max(data)+.3*delta);
     X = X1;
     for i=1:Ngauss
@@ -82,27 +82,27 @@ if plotting
     end
     X = sort(X);
     %%
-    
-    n = hist(data,X1);    
+
+    n = hist(data,X1);
     Y = pdf(bestfit,X');
     h(1) = plot(X,max(n)*Y/max(Y)/sum(n),'-b','linewidth',3);
     hold on
-    
+
     for i=1:length(bestfit.mu)
         Y1 = pdf('norm',X,bestfit.mu(i),bestfit.Sigma(:,:,i)^.5)*bestfit.PComponents(i);
         h(2+i) = plot(X,max(n)*Y1/max(Y)/sum(n),'r--','linewidth',2);
     end
-    
+
     h(2) = bar(X1,n/sum(n),'facecolor','none','linewidth',2);
-    
-    if ~washold 
+
+    if ~washold
         hold off
     end
-    
+
     legend(h(1:3),{'Gaussian mixture model', 'Cell line distribution', 'individual models'},...
         'location','northwest','fontweight','bold','fontsize',8)
     xlabel('data','fontweight','bold','fontsize',10)
     ylabel('Probability distribution','fontweight','bold','fontsize',10)
     set(gca,'fontweight','bold','fontsize',8)
-    
+
 end

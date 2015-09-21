@@ -9,7 +9,7 @@ for f = fieldnames(all_data)'
         subset_data.(f{:}) = all_data.(f{:})(subsetIdx,:);
     elseif idx==2
         subset_data.(f{:}) = all_data.(f{:})(:,subsetIdx);
-    else 
+    else
         error('Mismatched dimensions for field %s', f{:});
     end
 end

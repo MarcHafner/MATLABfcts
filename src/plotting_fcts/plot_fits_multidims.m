@@ -75,14 +75,14 @@ axis_height = (1-(nRows+1)*yspacing)/nRows;
 
 for ixp=1:nCols
     for iyp = 1:nRows
-        
+
         a(iyp, ixp) = get_newaxes([xspacing*1.5+(ixp-1)*(axis_width+xspacing) ...
             yspacing*1.5+(nRows-iyp)*(axis_height+yspacing) axis_width axis_height],1,...
             'fontsize',6);
-        
+
         title([p.xplotkey '=' AnyToString(xplotkeys(ixp)) '; ' ...
             p.yplotkey '=' AnyToString(yplotkeys(iyp))])
-        
+
         if isempty(p.xaxisval)
             idx = t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
                 t_fits.(p.yplotkey)==yplotkeys(iyp);
@@ -96,19 +96,19 @@ for ixp=1:nCols
             plot([min(xvals(:)) max(xvals(:))], p.yval_lines(i)*[1 1], ...
                 '-', 'color', [.8 .8 .8])
         end
-        
+
         for iC = 1:length(colorkeys)
             subt = t_fits(t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
                 t_fits.(p.yplotkey)==yplotkeys(iyp) & ...
                 t_fits.(p.colorkey)==colorkeys(iC),:);
-            
+
             for i=1:height(subt)
                 if isempty(p.xaxisval)
                     xvals = 10.^(log10(min(subt.Conc{i})):.01:log10(max(subt.Conc{i})));
                 else
                     xvals = p.xaxisval;
                 end
-                
+
                 Conc = p.xtransform(subt.Conc{i});
                 if strcmp(ydata, 'Relative count')
                     h(iC) = plot(p.xtransform(xvals), p.ytransform(subt.fit{i}(xvals)), '-', ...
@@ -134,11 +134,11 @@ for ixp=1:nCols
                 end
             end
         end
-        
+
         p.axischanges(gca)
         if iyp==nRows, xlabel(gca,'Concentration (\muM)','fontweight','bold'), end
         if ixp==1, ylabel(gca, ydata,'fontweight','bold'), end
-        
+
         if ixp==nCols && iyp==nRows
             hl = legend(h, strcat(p.colorkey, '=', AnyToString(colorkeys)), ...
                 'fontsize',6, 'orientation', 'horizontal');

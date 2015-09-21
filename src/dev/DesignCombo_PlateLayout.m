@@ -14,14 +14,14 @@ if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
 end
 
-if randomize_seed>1e3    
+if randomize_seed>1e3
     s = RandStream('mt19937ar','Seed',mod(randomize_seed,1e9));
     RandStream.setGlobalStream(s);
 end
 
 % well volume
 well_volume = 6e-5;
-min_volumedrop = 1e-11; % minimum step of the drop is 10pl for the 
+min_volumedrop = 1e-11; % minimum step of the drop is 10pl for the
 max_volumedrop = well_volume/500; % need a dilution of 500-fold minimum
 
 % stock conc in mM
@@ -73,7 +73,7 @@ ctrl_cnt = 384 - total_cnt;
 if edge_ctrl
     assert(ctrl_cnt>=12, 'For controls on the edge, need at least 12 controls')
     ctrlpos = zeros(16,24);
-    
+
     if ctrl_cnt<14 % only 6 controls on the edge
         disp('Only 6 control on the edge, would be better with at least 14 controls')
         ctrlpos([1 4 12 16],[7 18])=1;
@@ -82,13 +82,13 @@ if edge_ctrl
         ctrlpos([1 4 12 16],[7 18])=1;
         ctrlpos([5 11],[1 12 24])=1;
     end
-    
+
     if ctrl_cnt>=20 % put the corners as control (should be then discarded)
         ctrlpos([1 end], [1 end]) = 1;
     end
-    
-    
-    if ctrl_cnt>sum(ctrlpos(:))        
+
+
+    if ctrl_cnt>sum(ctrlpos(:))
         % complete the number of control with randomized positions
         temp = reshape(randperm(16*24),16,24);
         temp(ctrlpos==1) = 384;
@@ -96,7 +96,7 @@ if edge_ctrl
         cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
         ctrlpos(temp<=cutoff) = 1;
     end
-    
+
     ctrlidx = find(ctrlpos);
     assert(ctrl_cnt==length(ctrlidx));
 else
@@ -122,25 +122,25 @@ disp(' ')
 
 cnt = 1;
 
-                
+
 for iPD = 1:length(PrimaryDrugs)
-    
+
     % titration
     for iPSDo = 1:length(drugs_struct(iPD).SingleDoses)
         drugs_struct(iPD).layout(trtidx(cnt)) = drugs_struct(iPD).SingleDoses(iPSDo);
         cnt = cnt+1;
     end
-    
+
     for iSD = 1:length(SecondaryDrugs)
-        
+
         % combos
         for iPDo = 1:length(drugs_struct(iPD).Doses)
             for iSDo = 1:length(drugs_struct(length(PrimaryDrugs)+iSD).Doses);
-                
-                
-                
+
+
+
                 drugs_struct(iPD).layout(trtidx(cnt)) = drugs_struct(iPD).Doses(iPDo);
-                
+
                 drugs_struct(length(PrimaryDrugs)+iSD).layout(trtidx(cnt)) = ...
                     drugs_struct(length(PrimaryDrugs)+iSD).Doses(iSDo);
                 vol = well_volume*((drugs_struct(iPD).Doses(iPDo)/drugs_struct(iPD).nominal_conc)+...
@@ -152,11 +152,11 @@ for iPD = 1:length(PrimaryDrugs)
                         drugs_struct(length(PrimaryDrugs)+iSD).name, ...
                         drugs_struct(length(PrimaryDrugs)+iSD).Doses(iSDo))
                 end
-                
+
                 cnt = cnt+1;
             end
         end
-        
+
     end
 end
 
@@ -168,7 +168,7 @@ for iSD = 1:length(SecondaryDrugs)
             drugs_struct(length(PrimaryDrugs)+iSD).SingleDoses(iSSDo);
         cnt = cnt+1;
     end
-    
+
 end
 
 
@@ -196,7 +196,7 @@ end
 
 
     function new_Doses = round_Conc(old_Doses, nominal_conc)
-        
+
         dose_step = 1e3*nominal_conc *min_volumedrop/well_volume;
         dose_max = 1e3*nominal_conc *max_volumedrop/well_volume;
         temp_d = old_Doses;

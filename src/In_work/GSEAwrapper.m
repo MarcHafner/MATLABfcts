@@ -76,7 +76,7 @@ tempfolder = ['.' filesep ...
 if ~exist(tempfolder,'dir')
     mkdir(tempfolder)
 else
-    rmdir(tempfolder,'s')
+    status = rmdir(tempfolder,'s');
     mkdir(tempfolder)
 end
 if isempty(Outputfolder)
@@ -246,7 +246,11 @@ end
 %% cleaning up
 if exist(tempfolder,'dir')
     disp('cleaning stuff')
-    rmdir(tempfolder,'s')
+    status = rmdir(tempfolder,'s');
+    if ~status
+        fclose all
+        status = rmdir(tempfolder,'s');
+    end
 end
 if p.Nplot>0
     if ~isempty(p.Outputname)

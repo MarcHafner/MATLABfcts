@@ -10,7 +10,7 @@ function [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plo
 %
 %           plotting :  = 1 , pause for every plot
 %                       = .5, pause 1s for the biased ones
-%                       = 2 , save everything as a pdf
+%                       = 2 (or string for feil name), save everything as a pdf
 %
 
 
@@ -26,6 +26,12 @@ end
 if ~exist('plotting','var') || isempty(plotting)
     plotting = .5;
 end
+if ischar(plotting)
+    FileName = [plotting '.pdf'];
+    plotting = 2;
+elseif plotting == 2
+    FileName = 'TestBias_results.pdf';
+end
 
 if ~exist('valvars','var') || isempty(valvars)
     valvars = 'Cellcount';
@@ -37,7 +43,7 @@ BiasValue = zeros(height(t_plates), 3);
 clear BiasResults;
 
 get_newfigure(999, [40 100 600 400]);
-if plotting ==2
+if plotting==2
     mkdir temp_pdf
 end
 
@@ -62,6 +68,6 @@ for ip = 1:height(t_plates)
 end
 
 if plotting == 2
-    merge_pdf('./temp_pdf/*pdf', 'TestBias_results.pdf', true)
+    merge_pdf('./temp_pdf/*pdf', FileName , true)
     rmdir temp_pdf
 end

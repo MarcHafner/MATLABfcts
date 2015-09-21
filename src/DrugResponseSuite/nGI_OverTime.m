@@ -94,7 +94,7 @@ for ik = 1:height(t_keys)
                 diff(Times([iT idxEnd(iTE)])),  NDiv(iTE), ...
                 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'})], length(Conc),1) ...
                 table(Conc, nGI)]];
-            if length(Conc) > 4 || p.forcefit>0
+            if nargout>1 && (length(Conc) > 4 || p.forcefit>0)
                 if length(Conc) <= 4
                     n = 4-length(Conc)+ceil(p.forcefit);
                     Conc = [min(Conc).*(10.^(-n:-1)'); Conc];

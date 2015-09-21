@@ -16,7 +16,7 @@ function t_rate = TimeCourse_DivRate(t_data, cond_inkeys)
 if ~exist('cond_inkeys', 'var')
     trace_vars = {};
 else
-     trace_vars = cond_inkeys;
+    trace_vars = cond_inkeys;
 end
 for iF = ['Barcode' 'Well' 'DrugName' 'Conc' 'CellLine' ...
         strcat('DrugName',num2cell('2':'9')) strcat('Conc',num2cell('2':'9'))]
@@ -25,7 +25,7 @@ for iF = ['Barcode' 'Well' 'DrugName' 'Conc' 'CellLine' ...
     end
 end
 trace_vars = unique(trace_vars);
-   
+
 if exist('plate_inkeys','var') && ~isempty(cond_inkeys)
     plate_keys = unique([{'CellLine' 'Barcode' 'Time'} cond_inkeys]);
 else
@@ -48,14 +48,14 @@ for it = 1:height(t_location)
     else
         t_temp.Cellcount(1) = t_temp.Cellcount(2);
     end
-        
+    
     Time = mean([t_temp.Time(1:(end-1)) t_temp.Time(2:end)],2);
     Cellcount =  mean([t_temp.Cellcount(1:(end-1)) t_temp.Cellcount(2:end)],2);
     dx = diff(t_temp.Cellcount);
     dt = diff(t_temp.Time)/24;
     DivRate = dx./dt./Cellcount;
     DivRate = smooth(DivRate, 3);
-
+    
     n = NaN(width(t_temp),1);
     for i=1:width(t_temp), n(i) = length(unique(t_temp.(i))); end;
     annotation_vars = setdiff(t_temp.Properties.VariableNames(n==1), ...
@@ -69,15 +69,16 @@ for it = 1:height(t_location)
 end
 
 %
-t_ctrl = collapse(t_rate(t_rate.pert_type=='ctl_vehicle', ['DivRate' plate_keys]), ...
-    @(x)mean(max(x,0)), 'keyvars', plate_keys);
-
-t_rate.RelDivRate = NaN(height(t_rate),1);
-for i = 1:height(t_ctrl)
-    idx = eqtable(t_ctrl(i,plate_keys), t_rate(:,plate_keys));
-    t_rate.RelDivRate( idx ) = t_rate.DivRate( idx )./t_ctrl.DivRate(i);
+if isvariable(t_rate, 'pert_type')
+    t_ctrl = collapse(t_rate(t_rate.pert_type=='ctl_vehicle', ['DivRate' plate_keys]), ...
+        @(x)mean(max(x,0)), 'keyvars', plate_keys);
+    
+    t_rate.RelDivRate = NaN(height(t_rate),1);
+    for i = 1:height(t_ctrl)
+        idx = eqtable(t_ctrl(i,plate_keys), t_rate(:,plate_keys));
+        t_rate.RelDivRate( idx ) = t_rate.DivRate( idx )./t_ctrl.DivRate(i);
+    end
+    t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
+        max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
 end
-t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
-    max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
-
 

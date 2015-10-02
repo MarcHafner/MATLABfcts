@@ -9,7 +9,7 @@ Design = Des1;
 for i=1:length(Des1)
     assert(Des1(i).well_volume == Des2(i).well_volume)
     Drugs = unique([{Des1(i).Drugs.DrugName} {Des2(i).Drugs.DrugName}])';
-    DrugStruct = [Des1(i).Drugs; Des2(i).Drugs];
+    DrugStruct = [ToRow(Des1(i).Drugs) ToRow(Des2(i).Drugs)];
     Design(i).treated_wells = [Des1(i).treated_wells Des2(i).treated_wells];
     Design(i).plate_dims = size(Design(i).treated_wells);
 
@@ -62,7 +62,7 @@ for i=1:length(Des1)
         layout{iD} = [layout1 layout2];
     end
 
-    Design(i).Perturbations = struct('Name', Perturbations, 'layout', layout);
+    Design(i).Perturbations = struct('Name', ToRow(Perturbations), 'layout', ToRow(layout));
 
 
 end

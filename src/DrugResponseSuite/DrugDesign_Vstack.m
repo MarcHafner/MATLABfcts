@@ -62,7 +62,8 @@ for i=1:length(Des1)
         layout{iD} = [layout1; layout2];
     end
 
-    Design(i).Perturbations = struct('Name', Perturbations, 'layout', layout);
+    Design(i).Perturbations = struct('Name', ToRow(Perturbations), ...
+        'layout', ToRow(layout));
 
 
 end

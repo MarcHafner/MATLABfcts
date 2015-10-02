@@ -81,6 +81,3 @@ if isvariable(t_rate, 'pert_type')
     t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
         max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
 end
-
-t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
-    max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);

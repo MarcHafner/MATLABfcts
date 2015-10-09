@@ -1,7 +1,7 @@
 
 function t_mean = Merge_CellCountData(t_processed, plate_inkeys, ...
     cond_inkeys, plate_reps, numericfields)
-% [t_mean, t_processed] = Merge_CellCountData(t_processed, plate_inkeys, cond_inkeys,
+% t_mean = Merge_CellCountData(t_processed, plate_inkeys, cond_inkeys,
 %                               plate_reps, numericfields)
 %
 %   process the data from cell count. The data will be split for controls according

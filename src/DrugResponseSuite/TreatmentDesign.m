@@ -20,6 +20,7 @@ function Designs = TreatmentDesign(DrugNames, HMSLids, SingleDoses, nReps, varar
 %                       For each repeat the seed is 'Seed+i-1'
 %   edge_ctrl       default is true
 %   stock_conc      in uM, default is 1e4 (= 10mM)
+%   Vehicle         drug vehicle (default is DMSO)
 %   well_volume     in uL, default is 60 (for 384-well plates)
 %   plate_dims      either [N of rows ,  N of columns] or [N of wells],
 %                       default is [16 24]
@@ -43,6 +44,7 @@ addParameter(p,'DrugPairs',zeros(0,2), @isnumeric);
 addParameter(p,'Seed',1,  @(x) isscalar(x) && isnumeric(x));
 addParameter(p,'edge_ctrl',true, @(x) islogical(x) & isscalar(x));
 addParameter(p,'stock_conc',1e4, @(x) isvector(x) && isnumeric(x));     % in uM
+addParameter(p,'Vehicle','DMSO', @(x) iscellstr(x) || ischar(x));     % string
 addParameter(p,'well_volume',60, @(x) isscalar(x) && isnumeric(x));       % in uL
 addParameter(p,'plate_dims',[16 24], @(x) isvector(x) && isnumeric(x));
 addParameter(p,'Perturbations',repmat(struct('Name',[],'layout',[]),0,0), @isstruct);
@@ -77,6 +79,13 @@ if length(stock_conc)==1
 end
 stock_conc = num2cell(ToColumn(stock_conc));
 
+Vehicle = p.Vehicle;
+assert((iscellstr(Vehicle) && length(DrugNames)==length(Vehicle)) || ...
+    (ischar(Vehicle)))
+if ischar(Vehicle)
+    Vehicle = repmat({Vehicle},length(DrugNames),1);
+end
+
 if length(p.plate_dims)==1
     p.plate_dims = sqrt(p.plate_dims*[1/1.5 1.5]);
 end
@@ -108,7 +117,7 @@ end
 
 
 Drugs = struct('DrugName', DrugNames, 'HMSLid', ToColumn(HMSLids),...
-    'stock_conc', stock_conc, 'layout', zeros(p.plate_dims));
+    'stock_conc', stock_conc, 'layout', zeros(p.plate_dims), 'Vehicle', ToColumn(Vehicle));
 Designs = struct('plate_dims', repmat({p.plate_dims}, nReps, 1), ...
     'treated_wells', repmat({true(p.plate_dims)}, nReps, 1), ...
     'well_volume', repmat({p.well_volume}, nReps, 1), ...

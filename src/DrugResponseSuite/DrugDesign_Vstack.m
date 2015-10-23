@@ -16,9 +16,11 @@ for i=1:length(Des1)
     HMSLid = cell(length(Drugs),1);
     layout = cell(length(Drugs),1);
     stock_conc = cell(length(Drugs),1);
+    Vehicle = cell(length(Drugs),1);
     for iD = 1:length(Drugs)
         HMSLid(iD) = unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).HMSLid});
         stock_conc{iD} = min([DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).stock_conc]);
+        assert(length(unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).Vehicle}))==1)
         if ismember(Drugs{iD}, {Des1(i).Drugs.DrugName})
             layout1 = Des1(i).Drugs(strcmp(Drugs(iD), {Des1(i).Drugs.DrugName})).layout;
         else
@@ -33,7 +35,7 @@ for i=1:length(Des1)
     end
 
     Design(i).Drugs = struct('DrugName', Drugs, 'HMSLid', HMSLid, ...
-        'stock_conc', stock_conc, 'layout', layout);
+        'stock_conc', stock_conc, 'layout', layout, 'Vehicle', Vehicle);
 
 
     Perturbations = unique([{Des1(i).Perturbations.Name} {Des2(i).Perturbations.Name}])';

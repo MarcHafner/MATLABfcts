@@ -6,16 +6,37 @@ function hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
 %                       automatically appended -- do not include it here)
 %   Designs :       array of design structures with the following fields:
 %                       - plate_dims (plate dimension)
-%                       - treated_wells (wells treated with DMSO)
+%                       - treated_wells (wells treated to be backfilled)
+%                           by default the backfill is the same as Drugs
+%                           (or DMSO), but it can specified as:
+%                               0: DMSO
+%                               1: Aqueous + Brij35
+%                               2: Aqueous + Brij35 + glycerol
+%                               3: Aqueous + Tryton X100
+%                               4: Aqueous + Tryton X100 + glycerol
+%                               5: Aqueous + Tween 20
+%                               6: Aqueous + Tween 20 + glycerol
 %                       - well_volume (in uL)
 %                       - Drugs (structure with DrugName, HMSLid, stock_conc
 %                           and layout - concentration given in uM)
+%                           Vehicle of the drug can be specified as an
+%                           additional field 'Vehicle' with values:
+%                               0: DMSO (default)
+%                               1: Aqueous + Brij35
+%                               2: Aqueous + Brij35 + glycerol
+%                               3: Aqueous + Tryton X100
+%                               4: Aqueous + Tryton X100 + glycerol
+%                               5: Aqueous + Tween 20
+%                               6: Aqueous + Tween 20 + glycerol
+%
 %   t_plateinfo :   table (or file name to a tsv table) with columns:
 %                       - Barcode
 %                       - TreatmentFile (which should match the name where
 %                           'Deisgn is saved')
 %                       - DesignNumber
 %                       - PlateShaking
+%
+%
 
 document = com.mathworks.xml.XMLUtils.createDocument('Protocol');
 protocol = document.getDocumentElement;
@@ -55,15 +76,16 @@ for fluid_num = 1:length(fluid_data)
     fluids.appendChild(fluid);
     % Use 0-based numbering for fluid IDs.
     id = int2str(fluid_num - 1);
-    % The utility of RelatedID is not clear to me, but it was always -1 in
-    % one sample file, and not present in another. -JLM
-    related_id = int2str(-1);
     % Add to name->id map for later.
     fluid_ids(fluid_data(fluid_num).name) = id;
     fluid.setAttribute('ID', id);
-    fluid.setAttribute('RelatedID', related_id);
-    % Concentration shoudl be micromolar.
+    % The utility of RelatedID is not clear to me, but it was always -1 in
+    % one sample file, and not present in another. -JLM
+    %     related_id = int2str(-1);
+    %     fluid.setAttribute('RelatedID', related_id);  %%%% discarded -MH
+    % Concentration should be micromolar.
     conc_micromolar = fluid_data(fluid_num).stock_conc;
+    ClassID = getVehicle(fluid_data(fluid_num).Vehicle);
     % Create fluid properties.
     create_text_children(fluid, ...
         {
@@ -73,6 +95,8 @@ for fluid_num = 1:length(fluid_data)
         % display within the D300 software, or something else, so we'll
         % just play it safe and use the same units we used up top.
         'ConcentrationUnit' [MICRO 'M'];
+        % vehicule for the agent
+        'ClassID'
         } ...
         );
 end
@@ -86,7 +110,7 @@ for design_num = 1:length(Designs)
             'Design %d is not a standard plate size', design_num);
         throw(me);
     end
-
+    
     % Verify that all drug layout have the standard format
     for iD = 1:length(Designs(design_num).Drugs)
         if ~all(size(Designs(design_num).Drugs(iD).layout) == Designs(design_num).plate_dims)
@@ -95,7 +119,7 @@ for design_num = 1:length(Designs)
             throw(me);
         end
     end
-
+    
     % Verify that backfill maps are 2n x 3n (24/96/384/...) wells if it
     % exists. If we have to support different plate types in the future
     % this would need to be changed.
@@ -121,15 +145,18 @@ protocol.appendChild(plates);
 % NOTE What are the other Modes and do we need to support them?
 create_text_children(plates, {'Mode' 'Concentration'});
 
+% Check the different type of backfills
+Vehicles = cellfun(@getVehicle, unique({fluid_data.Vehicles}), 'uniformoutput', false);
+
 % Create Backfills container.
 backfills = document.createElement('Backfills');
 protocol.appendChild(backfills);
 backfill = document.createElement('Backfill');
 backfills.appendChild(backfill);
 backfill.setAttribute('Type', 'ToMaxVolume');
+backfill.setAttribute('ClassID', 'ToMaxVolume');
 backfill_wells = document.createElement('Wells');
 backfill.appendChild(backfill_wells);
-% FIXME Saw a ClassID="0" attribute in here. What is this?
 % FIXME For a six-plate experiment, saw two backfill elements each with half of
 %   the wells in it. Why?
 
@@ -151,7 +178,7 @@ end
 
 plate_cnt = 0;
 for plate_num = 1:height(t_trt_plates)
-
+    
     % Use barcode table's DesignNumber column as index into Design array.
     cur_design = Designs(t_trt_plates.DesignNumber(plate_num));
     if ~isfield(cur_design,'Drugs') || isempty(cur_design.Drugs) || ...
@@ -163,7 +190,7 @@ for plate_num = 1:height(t_trt_plates)
     % if plates are skipped, the plate number in the hpdd file is not the
     % same as plate_num
     plate_cnt = plate_cnt + 1;
-
+    
     plate_name = t_trt_plates.Barcode(plate_num);
     if isvariable(t_trt_plates, 'PlateShaking')
         PlateShaking = t_trt_plates.PlateShaking(plate_num);
@@ -172,11 +199,11 @@ for plate_num = 1:height(t_trt_plates)
     end
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
-
+    
     % creat the plate
     plate = document.createElement('Plate');
     plates.appendChild(plate);
-
+    
     create_text_children(plate, ...
         {
         'PlateType'   sprintf('Default%i', numel(cur_design.Drugs(1).layout));
@@ -215,7 +242,7 @@ for plate_num = 1:height(t_trt_plates)
             if well.hasChildNodes
                 wells.appendChild(well);
             end
-
+            
             % Create backfill well element. If treated_wells is not present we
             % apply backfill to all wells. If it is present, we look up the
             % current well address in it to determine whether to apply backfill.
@@ -276,5 +303,38 @@ if logical(X)
     T = 'True';
 else
     T = 'False';
+end
+end
+
+function ClassID = getVehicle(Vehicle)
+if isnumeric(Vehicle)
+    if ~ismember(Vehicle, 0:6)
+        error('Unkonwn value (%f) for Vehicle', Vehicle)
+    else
+        ClassID = Vehicle;
+    end
+elseif ischar(Vehicle)
+    switch lower(Vehicle)
+        case {'dmso'}
+            ClassID = 0;
+        case {'aqueous + brij35' 'brij35'}
+            ClassID = 1;
+        case {'aqueous + brij35 + glycerol' 'brij35 + glycerol' 'brij35+glycerol'}
+            ClassID = 2;
+        case {'aqueous + tryton x100' 'tryton x100' 'tryton' 'trytonx100'}
+            ClassID = 3;
+        case {'aqueous + tryton x100 + glycerol' 'tryton x100 + glycerol' ...
+                'tryton + glycerol' 'tryton+glycerol' 'trytonx100+glycerol'}
+            ClassID = 4;
+        case {'aqueous + tween 20' 'tween 20' 'tween' 'tween20'}
+            ClassID = 5;
+        case {'aqueous + tween 20 + glycerol' 'tween 20 + glycerol' ...
+                'tween + glycerol' 'tween+glycerol' 'tween20+glycerol'}
+            ClassID = 6;
+        otherwise
+            error('Unkonwn value (%s) for Vehicle', Vehicle)
+    end
+else
+    error('Unkonwn class for Vehicle: %s', disp(Vehicle))
 end
 end

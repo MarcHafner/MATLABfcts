@@ -23,13 +23,13 @@
          <Name>Brij35_based</Name>
          <Concentration>5000</Concentration>
          <ConcentrationUnit>µM</ConcentrationUnit>
-         <ClassID>1</ClassID>
+         <ClassID>2</ClassID>
       </Fluid>
       <Fluid ID="2">
          <Name>Brij35+gly_based</Name>
          <Concentration>5000</Concentration>
          <ConcentrationUnit>µM</ConcentrationUnit>
-         <ClassID>2</ClassID>
+         <ClassID>5</ClassID>
       </Fluid>
       <Fluid ID="3">
          <Name>TrytonX100_based</Name>
@@ -41,19 +41,19 @@
          <Name>TrytonX100+gly_based</Name>
          <Concentration>5000</Concentration>
          <ConcentrationUnit>µM</ConcentrationUnit>
-         <ClassID>4</ClassID>
+         <ClassID>6</ClassID>
       </Fluid>
       <Fluid ID="5">
          <Name>Tween20_based</Name>
          <Concentration>5000</Concentration>
          <ConcentrationUnit>µM</ConcentrationUnit>
-         <ClassID>5</ClassID>
+         <ClassID>1</ClassID>
       </Fluid>
       <Fluid ID="6">
          <Name>Tween20+gly_based</Name>
          <Concentration>5000</Concentration>
          <ConcentrationUnit>µM</ConcentrationUnit>
-         <ClassID>6</ClassID>
+         <ClassID>4</ClassID>
       </Fluid>
    </Fluids>
    <Plates>
@@ -840,7 +840,7 @@
             <Well C="21" P="1" R="13"/>
          </Wells>
       </Backfill>
-      <Backfill ClassID="1" Type="ToMaxVolume">
+      <Backfill ClassID="2" Type="ToMaxVolume">
          <Wells>
             <Well C="5" P="0" R="2"/>
             <Well C="7" P="0" R="4"/>
@@ -862,7 +862,7 @@
             <Well C="13" P="1" R="11"/>
          </Wells>
       </Backfill>
-      <Backfill ClassID="2" Type="ToMaxVolume">
+      <Backfill ClassID="5" Type="ToMaxVolume">
          <Wells>
             <Well C="2" P="0" R="3"/>
             <Well C="4" P="0" R="3"/>
@@ -906,7 +906,7 @@
             <Well C="13" P="1" R="13"/>
          </Wells>
       </Backfill>
-      <Backfill ClassID="4" Type="ToMaxVolume">
+      <Backfill ClassID="6" Type="ToMaxVolume">
          <Wells>
             <Well C="5" P="0" R="5"/>
             <Well C="9" P="0" R="5"/>
@@ -928,7 +928,7 @@
             <Well C="20" P="1" R="12"/>
          </Wells>
       </Backfill>
-      <Backfill ClassID="5" Type="ToMaxVolume">
+      <Backfill ClassID="1" Type="ToMaxVolume">
          <Wells>
             <Well C="4" P="0" R="2"/>
             <Well C="19" P="0" R="2"/>
@@ -950,7 +950,7 @@
             <Well C="6" P="1" R="13"/>
          </Wells>
       </Backfill>
-      <Backfill ClassID="6" Type="ToMaxVolume">
+      <Backfill ClassID="4" Type="ToMaxVolume">
          <Wells>
             <Well C="21" P="0" R="2"/>
             <Well C="8" P="0" R="3"/>

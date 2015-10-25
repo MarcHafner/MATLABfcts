@@ -334,19 +334,19 @@ elseif ischar(Vehicle)
         case {'dmso'}
             ClassID = 0;
         case {'aqueous + brij35' 'brij35'}
-            ClassID = 1;
+            ClassID = 2;2;
         case {'aqueous + brij35 + glycerol' 'brij35 + glycerol' 'brij35+glycerol'}
-            ClassID = 2;
+            ClassID = 5;
         case {'aqueous + tryton x100' 'tryton x100' 'tryton' 'trytonx100'}
             ClassID = 3;
         case {'aqueous + tryton x100 + glycerol' 'tryton x100 + glycerol' ...
                 'tryton + glycerol' 'tryton+glycerol' 'trytonx100+glycerol'}
-            ClassID = 4;
+            ClassID = 6;
         case {'aqueous + tween 20' 'tween 20' 'tween' 'tween20'}
-            ClassID = 5;
+            ClassID = 1;
         case {'aqueous + tween 20 + glycerol' 'tween 20 + glycerol' ...
                 'tween + glycerol' 'tween+glycerol' 'tween20+glycerol'}
-            ClassID = 6;
+            ClassID = 4;
         otherwise
             error('Unkonwn value (%s) for Vehicle', Vehicle)
     end

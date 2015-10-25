@@ -96,7 +96,7 @@ for fluid_num = 1:length(fluid_data)
         % just play it safe and use the same units we used up top.
         'ConcentrationUnit' [MICRO 'M'];
         % vehicule for the agent
-        'ClassID'
+        'ClassID' num2str(ClassID);
         } ...
         );
 end
@@ -129,6 +129,13 @@ for design_num = 1:length(Designs)
             'treated_wells for Design %d is not matching plate layout', design_num);
         throw(me);
     end
+    
+    if isfield(Designs(design_num), 'Vehicle') && ...
+            ~all(size(Designs(design_num).Vehicle) == Designs(design_num).plate_dims)
+        me = MException('ExportProtocol_D300:Vehicle_size_mismatch', ...
+            'Vehicle for Design %d is not matching plate layout', design_num);
+        throw(me);
+    end
 end
 
 % load the table is a file name was passed
@@ -146,19 +153,23 @@ protocol.appendChild(plates);
 create_text_children(plates, {'Mode' 'Concentration'});
 
 % Check the different type of backfills
-Vehicles = cellfun(@getVehicle, unique({fluid_data.Vehicles}), 'uniformoutput', false);
+Vehicles = cell2mat(cellfun(@getVehicle, setdiff(unique([Designs.Vehicle]),''), ...
+    'uniformoutput', false));
 
 % Create Backfills container.
 backfills = document.createElement('Backfills');
 protocol.appendChild(backfills);
-backfill = document.createElement('Backfill');
-backfills.appendChild(backfill);
-backfill.setAttribute('Type', 'ToMaxVolume');
-backfill.setAttribute('ClassID', 'ToMaxVolume');
-backfill_wells = document.createElement('Wells');
-backfill.appendChild(backfill_wells);
-% FIXME For a six-plate experiment, saw two backfill elements each with half of
-%   the wells in it. Why?
+backfill = cell(1, length(Vehicles));
+for iV = 1:length(Vehicles)
+    backfill{iV} = document.createElement('Backfill');
+    backfills.appendChild(backfill{iV});
+    backfill{iV}.setAttribute('Type', 'ToMaxVolume');
+    backfill{iV}.setAttribute('ClassID', num2str(Vehicles(iV)) );
+    backfill_wells{iV} = document.createElement('Wells');
+    backfill{iV}.appendChild(backfill_wells{iV});
+    % FIXME For a six-plate experiment, saw two backfill elements each with half of
+    %   the wells in it. Why?
+end
 
 assert(length(setdiff(unique(t_plateinfo.TreatmentFile),'-'))==1, ...
     ['Only one treatment file can be specified in the plate info file; ' ...
@@ -248,8 +259,13 @@ for plate_num = 1:height(t_trt_plates)
             % current well address in it to determine whether to apply backfill.
             if ~isfield(cur_design, 'treated_wells') || ...
                     cur_design.treated_wells(row,column)
+                if isfield(cur_design, 'Vehicle')
+                    iV = find(Vehicles == getVehicle(cur_design.Vehicle{row,column}));
+                else
+                    iV = find(Vehicles == 0); % default is DMSO
+                end
                 backfill_well = document.createElement('Well');
-                backfill_wells.appendChild(backfill_well);
+                backfill_wells{iV}.appendChild(backfill_well);
                 backfill_well.setAttribute('P', int2str(plate_cnt - 1));
                 backfill_well.setAttribute('R', int2str(row - 1));
                 backfill_well.setAttribute('C', int2str(column - 1));

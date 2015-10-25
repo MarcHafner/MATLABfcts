@@ -16,6 +16,9 @@ for i=1:length(Design)
 
     Design(i).treated_wells = pos;
     Design(i).plate_dims = plate_dims;
+    Design(i).Vehicle = repmat({''}, plate_dims);
+    Design(i).Vehicle(topcorner(1)+(0:(old_size(1)-1)), topcorner(2)+(0:(old_size(2)-1))) = ...
+        smallDesign(i).Vehicle;
 
     for iD = 1:length(Design(i).Drugs)
         Design(i).Drugs(iD).layout = zeros(plate_dims);

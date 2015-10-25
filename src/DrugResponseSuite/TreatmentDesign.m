@@ -120,6 +120,7 @@ Drugs = struct('DrugName', DrugNames, 'HMSLid', ToColumn(HMSLids),...
     'stock_conc', stock_conc, 'layout', zeros(p.plate_dims), 'Vehicle', ToColumn(Vehicle));
 Designs = struct('plate_dims', repmat({p.plate_dims}, nReps, 1), ...
     'treated_wells', repmat({true(p.plate_dims)}, nReps, 1), ...
+    'Vehicle', repmat({repmat({''},p.plate_dims)}, nReps, 1), ...
     'well_volume', repmat({p.well_volume}, nReps, 1), ...
     'Drugs', repmat({Drugs}, nReps, 1), 'Seed', num2cell(p.Seed-1+(1:nReps)'), ...
     'Perturbations', repmat({p.Perturbations}, nReps, 1));
@@ -198,10 +199,10 @@ assert(all(any(allTreatments>0)))
 
 %% assign the design for each replicate
 for iR = 1:nReps
-
+    
     Designs(iR).Drugs = RandomizePlatePositions(Designs(iR).Drugs, ...
         allTreatments, nWells, p.plate_dims, ctrlidx, ctrl_cnt, p.Seed+iR-1);
-
+    
     allDrugs = reshape([Designs(iR).Drugs.layout], [p.plate_dims length(DrugNames)]);
     nDrugs = sum(allDrugs>0,3);
     assert(all(squeeze(sum(sum((allDrugs>0).*repmat(nDrugs==1,1,1,length(DrugNames)),2),1))==...
@@ -211,9 +212,11 @@ for iR = 1:nReps
             (length(p.ComboLists{iCo,1})*length(p.ComboLists{iCo,2})*...
             sum(all(p.DrugPairs==(ones(size(p.DrugPairs,1),1)*p.DrugPairs(iCo,:)),2))))
     end
-
-
+    
+    Designs(iR) = SetDrugVehicle(Designs(iR));
+    
 end
 
 
 end
+

@@ -1,5 +1,5 @@
-function plot_DrugDesing(Design, figurename, folder)
-% plot_DrugDesing(Design, figurename, folder)
+function DrugDesign_plot(Design, figurename, folder)
+% DrugDesign_plot(Design, figurename, folder)
 
 if ~exist('figurename','var')
     figurename = '';
@@ -19,8 +19,8 @@ for iD = 1:length(Design)
         nDisp = nDisp + length(Design(iD).Perturbations);
     end
 
-    nCols = ceil(sqrt(nDisp+1));
-    nRows = ceil((nDisp+1)/nCols);
+    nCols = ceil(sqrt(nDisp+2));
+    nRows = ceil((nDisp+2)/nCols);
 
     xspacing = .03;
     axis_width = (1-(nCols+1)*xspacing)/nCols;
@@ -71,30 +71,30 @@ for iD = 1:length(Design)
             get_newaxes(axespos(iC, iR),1,...
                 'fontsize',6);
 
-            conc = Design(iD).Perturbations(iPr).layout;
+            pert = Design(iD).Perturbations(iPr).layout;
 
-            if islogical(conc)
-                conc = conc+1;
+            if islogical(pert)
+                pert = pert+1;
                 label = 'F/T';
-            elseif iscell(conc) && iscellstr(conc(~cellfun(@isempty,conc)));
-                conc(cellfun(@isempty,conc)) = {''};
-                cats = unique(conc(:));
-                val = NaN(size(conc));
+            elseif iscell(pert) && iscellstr(pert(~cellfun(@isempty,pert)));
+                pert(cellfun(@isempty,pert)) = {''};
+                cats = unique(pert(:));
+                val = NaN(size(pert));
                 for i=1:length(cats)
-                    val(strcmp(cats{i},conc)) = i-1;
+                    val(strcmp(cats{i},pert)) = i-1;
                 end
-                conc = val/(length(cats)-.5);
+                pert = val/(length(cats)-.5);
                 label = ['(' strjoin(cats,',') ')'];
-            elseif (max(conc(:))/min(conc(:)))>10 && max(conc(:))*min(conc(:))>=0
-                conc = log10(conc);
-                label = sprintf('log10  [%.2g - %.2g]', max(conc(:)), min(conc(:)));
+            elseif (max(pert(:))/min(pert(:)))>10 && max(pert(:))*min(pert(:))>=0
+                pert = log10(pert);
+                label = sprintf('log10  [%.2g - %.2g]', max(pert(:)), min(pert(:)));
             else
-                label = sprintf('[%.2g - %.2g]', max(conc(:)), min(conc(:)));
+                label = sprintf('[%.2g - %.2g]', max(pert(:)), min(pert(:)));
             end
-            [range, conc] = DataRangeCap(conc);
+            [range, pert] = DataRangeCap(pert);
 
 
-            imagesc(conc, range)
+            imagesc(pert, range)
 
             title({Design(iD).Perturbations(iPr).Name; label}, ...
                 'fontsize',8,'fontweight','bold')
@@ -108,7 +108,7 @@ for iD = 1:length(Design)
 
     end
 
-    get_newaxes(axespos(nCols, nRows),nCols*nRows,'fontsize',6);
+    get_newaxes(axespos(nCols, nRows),1,'fontsize',6);
 
     if ~isempty(Design(iD).Drugs)
         allDrugs = reshape([Design(iD).Drugs.layout], ...
@@ -127,6 +127,30 @@ for iD = 1:length(Design)
             'xtick',1:3:30,'ydir','reverse')
 
     end
+    
+    
+    get_newaxes(axespos(nCols-1, nRows),1,'fontsize',6);
+    
+    cats = unique({Design(iD).Vehicle{:}});
+    val = NaN(size(Design(iD).Vehicle));
+    for i=1:length(cats)
+        val(strcmp(cats{i},Design(iD).Vehicle)) = i-1;
+    end
+    veh = val/(length(cats)-.5);
+    label = ['(' strjoin(cats,',') ')'];
+    [range, veh] = DataRangeCap(veh);
+    
+    
+    imagesc(veh, range)
+    
+    title({'Vehicles'; label}, ...
+        'fontsize',8,'fontweight','bold')
+    
+    xlim([.5 Design(iD).plate_dims(2)+.5])
+    ylim([.5 Design(iD).plate_dims(1)+.5])
+    
+    set(gca,'ytick',1:2:16, 'yticklabel', cellfun(@(x) {char(x)},num2cell(65:2:80)),...
+        'xtick',1:3:30,'ydir','reverse')
 end
 
 

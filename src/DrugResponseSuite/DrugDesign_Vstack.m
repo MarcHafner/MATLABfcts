@@ -11,6 +11,7 @@ for i=1:length(Des1)
     Drugs = unique([{Des1(i).Drugs.DrugName} {Des2(i).Drugs.DrugName}])';
     DrugStruct = [Des1(i).Drugs; Des2(i).Drugs];
     Design(i).treated_wells = [Des1(i).treated_wells; Des2(i).treated_wells];
+    Design(i).Vehicle = [Des1(i).Vehicle; Des2(i).Vehicle];
     Design(i).plate_dims = size(Design(i).treated_wells);
 
     HMSLid = cell(length(Drugs),1);
@@ -20,7 +21,9 @@ for i=1:length(Des1)
     for iD = 1:length(Drugs)
         HMSLid(iD) = unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).HMSLid});
         stock_conc{iD} = min([DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).stock_conc]);
-        assert(length(unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).Vehicle}))==1)
+        assert(length(unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).Vehicle}))==1,...
+            'inconsistent vehicles')
+        Vehicle(iD) = unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).Vehicle});
         if ismember(Drugs{iD}, {Des1(i).Drugs.DrugName})
             layout1 = Des1(i).Drugs(strcmp(Drugs(iD), {Des1(i).Drugs.DrugName})).layout;
         else

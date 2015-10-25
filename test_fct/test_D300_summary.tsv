@@ -1,0 +1,8 @@
+Drug Name	HMSLid	Stock (mM)	D300 Total volume (ul)	Total volume (ul) at 10mM	plate1	plate2
+DMSO_based		5	1.4	0.7	0.18	0.18
+Brij35_based		5	1.4	0.7	0.18	0.18
+Brij35+gly_based		5	1.4	0.7	0.18	0.18
+TrytonX100_based		5	1.4	0.7	0.18	0.18
+TrytonX100+gly_based		5	1.4	0.7	0.18	0.18
+Tween20_based		5	1.4	0.7	0.18	0.18
+Tween20+gly_based		5	1.4	0.7	0.18	0.18

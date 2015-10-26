@@ -259,8 +259,12 @@ for plate_num = 1:height(t_trt_plates)
             % current well address in it to determine whether to apply backfill.
             if ~isfield(cur_design, 'treated_wells') || ...
                     cur_design.treated_wells(row,column)
-                if isfield(cur_design, 'Vehicle')
-                    iV = find(Vehicles == getVehicle(cur_design.Vehicle{row,column}));
+                if isfield(cur_design, 'Vehicle') 
+                    if ~isempty(cur_design.Vehicle{row,column})
+                        iV = find(Vehicles == getVehicle(cur_design.Vehicle{row,column}));
+                    else
+                        continue
+                    end
                 else
                     iV = find(Vehicles == 0); % default is DMSO
                 end

@@ -84,7 +84,7 @@ else
     PertNames = {};
 end
 
-if isfield(Design1.Drugs,'HMSLid') & ~isempty(Design1.Drugs)
+if isfield(Design1.Drugs,'HMSLid') && ~isempty(Design1.Drugs)
     HMSLids = {Design1.Drugs.HMSLid};
     t_HMSLids = table([DrugNames {'-'}]', [HMSLids(order) {'-'}]', ...
         'VariableNames', {'DrugName' 'HMSLid'});
@@ -164,5 +164,11 @@ if ~isvariable(t_design, 'pert_type')
     pert_type(t_design.Conc==0 & ismember(t_design.Well,UntrtWell)) = {'Untrt'};
     t_design = [t_design table(pert_type)];
 end
+
+% add the vehicles
+Vehicles = Design1.Vehicle(sub2ind(Design1.plate_dims, rows, cols));
+Vehicles(cellfun(@isempty, Vehicles)) = {'-'};
+
+t_design = [t_design, table(Vehicles, 'VariableNames', {'Vehicle'})];
 
 t_design = TableToCategorical(t_design, 0);

@@ -102,8 +102,7 @@ assert(p.well_volume>1 && p.well_volume<1e4, 'Well volume should be given in uL'
 if p.Seed==0 && nReps>1
     warnprintf('Seed is set to 0 (i.e. no randomization) and Nreps>1')
     warnprintf('This means all replicates will have the same layout!')
-    warnprintf('Confirm to proceed')
-    pause
+    pause(5)
 end
 
 for iP=1:length(p.Perturbations)
@@ -201,7 +200,7 @@ assert(all(any(allTreatments>0)))
 for iR = 1:nReps
     
     Designs(iR).Drugs = RandomizePlatePositions(Designs(iR).Drugs, ...
-        allTreatments, nWells, p.plate_dims, ctrlidx, ctrl_cnt, p.Seed+iR-1);
+        allTreatments, nWells, p.plate_dims, ctrlidx, ctrl_cnt, (p.Seed~=0)*(p.Seed+iR-1));
     
     allDrugs = reshape([Designs(iR).Drugs.layout], [p.plate_dims length(DrugNames)]);
     nDrugs = sum(allDrugs>0,3);

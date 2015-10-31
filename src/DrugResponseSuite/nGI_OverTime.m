@@ -11,8 +11,9 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 %   keys are used for aggregation of the data; default are : CellLine,
 %   DrugName, Time, SeedingNumber, Date.
 %
-%   varargin:   - 'MinNdiv'     [0.5]
-%               - 'MinDt'       [6 h]
+%   varargin:   - 'MinNdiv'     [0.1]
+%               - 'MinDt'       [8 h]
+%               - 'MaxDt'       
 %               - 'minT0'       [0 h]
 %               - 'T0date'      Input alternative to T0shift for timecourse:
 %                                   date and time of the treatment
@@ -24,8 +25,8 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 
 p = inputParser;
 addParameter(p, 'MinNDiv', 1/10, @isscalar);
-addParameter(p, 'MinDT',   8, @isscalar);
-addParameter(p, 'MaxDT',   96, @isscalar);
+addParameter(p, 'MinDt',   8, @isscalar);
+addParameter(p, 'MaxDt',   96, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
 addParameter(p, 'pcutoff', .1, @isscalar);
 addParameter(p, 'forcefit', false, @isscalar);
@@ -66,7 +67,7 @@ for ik = 1:height(t_keys)
         NDiv = log2(t_ctrl.Cellcount((iT+1):end)/t_ctrl.Cellcount(iT));
         Ctrl_AvDivRate = log2(t_ctrl.Cellcount((iT+1):end)/t_ctrl.Cellcount(iT))./Ctrl_DeltaT;
 
-        idxEnd = find(Ctrl_DeltaT>=p.MinDT/24 & NDiv>=p.MinNDiv & Ctrl_DeltaT<=p.MaxDT/24);
+        idxEnd = find(Ctrl_DeltaT>=p.MinDt/24 & NDiv>=p.MinNDiv & Ctrl_DeltaT<=p.MaxDt/24);
         NDiv = NDiv(idxEnd);
         Ctrl_AvDivRate = Ctrl_AvDivRate(idxEnd);
         idxEnd = iT + idxEnd;

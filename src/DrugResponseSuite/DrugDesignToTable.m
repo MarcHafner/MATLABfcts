@@ -166,9 +166,10 @@ if ~isvariable(t_design, 'pert_type')
 end
 
 % add the vehicles
-Vehicles = Design1.Vehicle(sub2ind(Design1.plate_dims, rows, cols));
-Vehicles(cellfun(@isempty, Vehicles)) = {'-'};
-
-t_design = [t_design, table(Vehicles, 'VariableNames', {'Vehicle'})];
+if isfield(Design1, 'Vehicle')
+    Vehicles = Design1.Vehicle(sub2ind(Design1.plate_dims, rows, cols));
+    Vehicles(cellfun(@isempty, Vehicles)) = {'-'};
+    t_design = [t_design, table(Vehicles, 'VariableNames', {'Vehicle'})];
+end
 
 t_design = TableToCategorical(t_design, 0);

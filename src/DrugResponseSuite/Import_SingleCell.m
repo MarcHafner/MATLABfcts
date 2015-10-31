@@ -30,6 +30,9 @@ if ~exist('timecourse', 'var') || isempty(timecourse)
     timecourse = isvariable(t_processed,'Date');
 end
 
+if ~exist('filefilter', 'var')
+    filefilter = '';
+end
 
 if isempty(fields)
     f = ls([folder '/' char(t_processed.Barcode(1)) '/*' filefilter '*txt']);
@@ -132,8 +135,8 @@ for iPW = 1:height(t_processed)
         for i=1:length(fields)
             if ~isvariable(t_ss, fields{i})
                 ftemp = fopen([subfolder filesep files{it}],'r');
-                fields = regexp(fgetl(ftemp),'\t','split');
-                warnprintf('Available fields are:\n\t - %s \n', strjoin(fields,'\n\t - '));
+                allfields = regexp(fgetl(ftemp),'\t','split');
+                warnprintf('Available fields are:\n\t - %s \n', strjoin(allfields,'\n\t - '));
                 error('Field %s not found in file %s', fields{i}, files{it})
             end
             SingleCell(output_cnt).(fields{i}) = t_ss.(fields{i});

@@ -1,5 +1,6 @@
 
 function [mRNA_values, mRNA_labels] = ImportAnnotate_DGEdata(filename, plateinfo, Barcode, folder)
+% [mRNA_values, mRNA_labels] = ImportAnnotate_DGEdata(filename, plateinfo, Barcode, folder)
 
 
 p = struct('TimeCourse', false, 'Cellcount', 'none');

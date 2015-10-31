@@ -1,4 +1,5 @@
 function t_data = Import_IncucyteCellCountData(folder, plateinfo, varargin)
+% t_data = Import_IncucyteCellCountData(folder, plateinfo, varargin)
 %
 %   Merge the information in the barcode (either file or table) with the
 %   data from the output of the Incucyte or from other tsv file with proper

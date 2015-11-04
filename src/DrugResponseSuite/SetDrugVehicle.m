@@ -9,6 +9,8 @@ Design.Vehicle = cell(size(trt));
 if length(Vehicles)>1
     SelectVec = Vehicles{argmax(nV)};
     warnprintf('multiple vehicles: setting ALL controls to %s', SelectVec)
+else
+    SelectVec = Vehicles{1};
 end
 for iV = 1:length(Vehicles)
     trt_veh = reshape(...

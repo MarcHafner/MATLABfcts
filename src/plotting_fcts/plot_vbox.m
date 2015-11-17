@@ -9,6 +9,7 @@ Generate_Plotting_parameters
 
 if isempty(values)
     warning('plot_vbox : empty value matrix; over')
+    h = [];
     return
 end
 

@@ -1,4 +1,4 @@
-function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
+function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, plate_keys, cond_keys, varargin)
 % [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 %   Normalized relative growth for different time intervals.
 %   Sigmoidal fit on the drug response data (expect concentration in uM) to
@@ -34,15 +34,20 @@ parse(p,varargin{:})
 p = p.Results;
 
 
-if exist('keys','var') && ~isempty(keys)
-    keys = intersect(t_data.Properties.VariableNames, ...
-        [{'CellLine' 'DrugName' 'Time' 'Date' 'Barcode' 'SeedingDensity'} keys]);
+if exist('plate_keys','var') && ~isempty(plate_keys)
+    plate_keys = intersect(t_data.Properties.VariableNames, ...
+        [{'CellLine' 'DrugName' 'Time' 'Date' 'Barcode' 'SeedingDensity'} plate_keys]);
 else
-    keys = intersect(t_data.Properties.VariableNames, ...
+    plate_keys = intersect(t_data.Properties.VariableNames, ...
         {'CellLine' 'DrugName' 'Time' 'Date' 'Barcode' 'SeedingDensity'});
 end
-
-t_keys = unique(t_data(t_data.DrugName~='-',setdiff(keys, {'Time' 'Date'})));
+if exist('cond_keys','var') && ~isempty(cond_keys)
+    cond_keys = intersect(t_data.Properties.VariableNames, cond_keys);
+else
+    cond_keys = {};
+end
+    
+t_keys = unique(t_data(t_data.DrugName~='-',setdiff([plate_keys cond_keys], {'Time' 'Date'})));
 
 
 %%
@@ -53,9 +58,9 @@ t_nGITime = table;
 for ik = 1:height(t_keys)
     fprintf([strjoin(table2cellstr(t_keys(ik,:),0),'|') ' :']);
     %%
-    subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
-    t_ctrl = sortrows(collapse(t_data(eqtable(t_keys(ik,:), t_data(:,setdiff(keys,'DrugName'))) & ...
-        t_data.pert_type=='ctl_vehicle' ,:), @mean, 'keyvars', keys), 'Time');
+    subt = t_data(eqtable(t_keys(ik,:), t_data(:,[plate_keys cond_keys])),:);
+    t_ctrl = sortrows(collapse(t_data(eqtable(t_keys(ik,:), t_data(:,setdiff(plate_keys,'DrugName'))) & ...
+        t_data.pert_type=='ctl_vehicle' ,:), @mean, 'keyvars', plate_keys), 'Time');
 
     Times = t_ctrl.Time;
     assert(all(Times==unique(Times)));
@@ -72,6 +77,7 @@ for ik = 1:height(t_keys)
         Ctrl_AvDivRate = Ctrl_AvDivRate(idxEnd);
         idxEnd = iT + idxEnd;
         fprintf(sprintf(' %.0f(%i);', Times(iT), length(idxEnd)));
+        if mod(iT,10)==0, fprintf('\n'); end
         for iTE = 1:length(idxEnd)
             % treatment
             Conc = intersect(subt.Conc(subt.Time==Times(iT)), ...
@@ -79,7 +85,7 @@ for ik = 1:height(t_keys)
             Conc = setdiff(Conc, 0);
             t_trt = sortrows(collapse(subt(ismember(subt.Conc, Conc) & ...
                 ismember(subt.Time, Times([iT idxEnd(iTE)])),:), ...
-                @mean, 'keyvars', [keys 'Conc']), 'Time');
+                @mean, 'keyvars', [plate_keys cond_keys 'Conc']), 'Time');
 
             nGI = NaN(length(Conc),1);
             parfor iC = 1:length(Conc)

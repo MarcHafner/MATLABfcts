@@ -120,7 +120,7 @@ if capped
     g = min(g, ranges(2,1));
 end
 
-Npara = 3.9; % N of parameters in the growth curve with some constraints
+Npara = 4; % N of parameters in the growth curve with some constraints
 log = '';
 flag = 1;
 if isempty(Robust) || ~Robust
@@ -149,7 +149,7 @@ RSS2 = gof.sse;
 RSS1 = gof_flat.sse;
 
 df1 = (Npara -1);
-df2 = (length(g) -Npara);
+df2 = (length(g) -Npara +1);
 F = ( (RSS1-RSS2)/df1 )/( RSS2/df2 );
 p = 1-fcdf(F, df1, df2);
 

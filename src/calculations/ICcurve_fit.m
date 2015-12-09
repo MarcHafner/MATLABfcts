@@ -47,6 +47,8 @@ ranges = [
     max(min(Conc)*1e-4,1e-7) min(max(Conc)*1e2, 1e3)  %E50
     .1 5    % HS
     ]';
+ranges(:,2) = -log10(ranges([2 1],2));
+priors(2) = -log10(priors(2));
 
 plotting = 0;
 fitting = 'average';
@@ -66,11 +68,11 @@ end
 % 'IC50'
 switch fit_type
     case 'IC50'
-        ranges(1,2) = 0; % lowest Einf
+        ranges(1,1) = 0; % lowest Einf
     case 'GI50'
-        ranges(1,2) = -2; % lowest GIinf; assuming that cells are at least 50% more than seeding.
+        ranges(1,1) = -2; % lowest GIinf; assuming that cells are at least 50% more than seeding.
     case 'GR50'
-        ranges(1,2) = -1; % lowest GRinf;
+        ranges(1,1) = -1; % lowest GRinf;
 
 end
 
@@ -178,11 +180,11 @@ else
     fit_growth = fit_res(xc);
 
     Einf = fit_res.a;
-    EC50 = fit_res.b;
+    EC50 = 10^-fit_res.b;
     Hill = fit_res.c;
     fit_final = fit_res;
 
-    xI50 = fit_res.b*((((1-fit_res.a)/(.5-fit_res.a))-1)^(1/fit_res.c));
+    xI50 = EC50*( ( ( (1-Einf)/(.5-Einf) )-1) ^(1/Hill));
     if any(fit_growth<.5) && any(fit_growth>.5) % inter/extrapolation is fine
         log = [log '\t' fit_type ' in the range of data'];
     elseif all(fit_growth>.5)
@@ -232,8 +234,9 @@ end
             'Lower',ranges(1,:),...
             'Upper',ranges(2,:),...
             'Startpoint',priors);
-        f = fittype('a + (1-a) ./ ( 1 + (x/b).^c)','options',fitopt);
-        [fit_result,gof2] = fit(doses', response',f,'Robust',Robust);
+        % b' = -log10(b) -> search in the linear domain : (x/b) = (x*10^b')
+        f = fittype('a + (1-a) ./ ( 1 + (x*(10.^b)).^c)','options',fitopt);
+        [fit_result, gof2] = fit(doses', response',f,'Robust',Robust);
     end
 
     function [fit_result, gof2] = flat_fit(doses, response)

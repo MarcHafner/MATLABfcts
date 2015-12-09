@@ -105,7 +105,7 @@ for ik = 1:height(t_keys)
         [GR50, Hill_GR, GRinf, GRmax, AUC_GR, GR_r2, EC50_GR, GR_fit] = ...
             ICcurve_fit(subt.Conc, subt.GRvalue, 'GR50', fitopt);
         t_temp = [t_temp table(GR50, Hill_GR, GRinf, GRmax, AUC_GR, EC50_GR, GR_r2) ...
-            table({GR_fit}, {subt.nRelGrowth'}, 'VariableNames', {'GR_fit' 'GRvalue'})];
+            table({GR_fit}, {subt.GRvalue'}, 'VariableNames', {'GR_fit' 'GRvalue'})];
     end
 
 t_fits = [t_fits; t_temp];

@@ -1,13 +1,13 @@
 %
 % function [xI50, Hill, Einf, xMax, Area, r2, EC50, fit_final, p, log, flag] = ...
-%     ICcurve_fit(Conc, Growth, fit_type, opt)
+%     ICcurve_fit(Conc, Values, fit_type, opt)
 %
 %   Inputs:
 %   ---------
 %
 %   Conc:   expected in uM, NOT logged
 %   Growth: normalized to control (=1) fit_type
-%   fit_type:   'GI50' or 'IC50' (default)
+%   fit_type:   'GR50' (default if any Values<0), 'GI50' or 'IC50' (second default)
 %
 %   options:
 %       - plotting: plot the curves [false]
@@ -25,7 +25,7 @@
 %   IC50 => Growth is relative to control (end/ctrl)
 %   GI50 => Growth is relative to growth of the control:
 %               (end-day0)/(ctrl-day0)
-%   nGI50 => normalized growth is relative to growth of the control
+%   GR50 => normalized growth is relative to growth of the control
 %           Growth should not comprise the control value; each replicate is
 %           a column
 %
@@ -36,14 +36,13 @@
 %
 
 function [xI50, Hill, Einf, xMax, Area, r2, EC50, fit_final, p, log, flag] = ...
-    ICcurve_fit(Conc, Growth, fit_type, opt)
+    ICcurve_fit(Conc, Values, fit_type, opt)
 
 
-% parameters : E0 Einf EC50 HS (all in uM)
-priors = [1 .1 median(Conc) 2];
+% parameters : Einf  EC50 (uM)   HS 
+priors = [.1 median(Conc) 2];
 
 ranges = [
-    .975 1.025  %E0
     0 1    %Einf
     max(min(Conc)*1e-4,1e-7) min(max(Conc)*1e2, 1e3)  %E50
     .1 5    % HS
@@ -52,13 +51,13 @@ ranges = [
 plotting = 0;
 fitting = 'average';
 pcutoff = .05;
-capped = true;
+capped = 1.05;
 extrapolrange = 10;
 Robust = [];
 
 if ~exist('fit_type','var') || isempty(fit_type)
-    if any(Growth<0)
-        fit_type = 'nGI50';
+    if any(Values<0)
+        fit_type = 'GR50';
     else
         fit_type = 'IC50';
     end
@@ -70,8 +69,8 @@ switch fit_type
         ranges(1,2) = 0; % lowest Einf
     case 'GI50'
         ranges(1,2) = -2; % lowest GIinf; assuming that cells are at least 50% more than seeding.
-    case 'nGI50'
-        ranges(1,2) = -1; % lowest nGIinf;
+    case 'GR50'
+        ranges(1,2) = -1; % lowest GRinf;
 
 end
 
@@ -87,22 +86,22 @@ if exist('opt','var')
 end
 
 Conc = ToRow(Conc);
-if isvector(Growth)
-    Growth=ToColumn(Growth);
+if isvector(Values)
+    Values=ToColumn(Values);
     fitting = 'average';
 end
-assert(all([1 size(Growth,1)]==size(Conc)))
+assert(all([1 size(Values,1)]==size(Conc)))
 
 
 switch fitting
     case 'average'
-        g = mean(Growth,2)';
+        g = mean(Values,2)';
         g = g(sortidx(Conc));
         Conc = Conc(sortidx(Conc));
     case 'individual'
-        for i=1:size(Growth,2)
+        for i=1:size(Values,2)
             [xI50(i), Hill(i), Einf(i), Area(i), r2(i), EC50(i), fit_final{i}, p(i), log{i}] = ...
-                ICcurve_fit(Conc, Growth(:,i)', fit_type, opt);
+                ICcurve_fit(Conc, Values(:,i)', fit_type, opt);
         end
         return
 
@@ -114,13 +113,13 @@ end
 
 
 % remove the case of enhanced proliferation to avoid failure of F-test
-if capped
+if capped>0
     Conc = Conc(~isnan(g));
     g = g(~isnan(g));
-    g = min(g, ranges(2,1));
+    g = min(g, capped);
 end
 
-Npara = 4; % N of parameters in the growth curve with some constraints
+Npara = 3; % N of parameters in the growth curve
 log = '';
 flag = 1;
 if isempty(Robust) || ~Robust
@@ -145,27 +144,29 @@ end
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);
 
 % F-test for the models
+Npara_flat = 1;
+
 RSS2 = gof.sse;
 RSS1 = gof_flat.sse;
 
-df1 = (Npara -1);
+df1 = (Npara -Npara_flat);
 df2 = (length(g) -Npara +1);
 F = ( (RSS1-RSS2)/df1 )/( RSS2/df2 );
 p = 1-fcdf(F, df1, df2);
 
-xc = 10.^(log10(min(Conc))-1:.05:log10(max(Conc))+1);
+xc = 10.^(log10(min(Conc)/extrapolrange):.05:log10(max(Conc)*extrapolrange));
 r2 = gof.rsquare;
 
 % results
 Area = sum( (1-(g(2:end)+g(1:(end-1)))/2) .* diff(log10(Conc))) / ...
-    diff(log10(Conc([1 end])));
-xMax = min(g(end-[1 0]));
+    diff(log10(Conc([1 end]))); % normalized version of the AUC
+xMax = min(g(end-[1 0])); % robust minimum on the last 2 concentrations
 
 if p>=pcutoff || isnan(RSS2) % failure of robust fit
     xI50 = +Inf;
     EC50 = +Inf;
     Hill = 0;
-    Einf = min(g(end-[1 0]));
+    Einf = min(g(end-[1 0])); % robust minimum on the last 2 concentrations
     log = [log '**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
 
@@ -176,14 +177,12 @@ else
 
     fit_growth = fit_res(xc);
 
-    Einf = fit_res.b;
-    Hill = fit_res.d;
+    Einf = fit_res.a;
+    EC50 = fit_res.b;
+    Hill = fit_res.c;
     fit_final = fit_res;
 
-
-    EC50 = fit_res.c;
-
-    xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
+    xI50 = fit_res.b*((((1-fit_res.a)/(.5-fit_res.a))-1)^(1/fit_res.c));
     if any(fit_growth<.5) && any(fit_growth>.5) % inter/extrapolation is fine
         log = [log '\t' fit_type ' in the range of data'];
     elseif all(fit_growth>.5)
@@ -207,13 +206,13 @@ end
 
 if plotting
 
-    errorbar(log10(Conc), mean(Growth,2), std(Growth,[],2) ,'.k-');
+    errorbar(log10(Conc), mean(Values,2), std(Values,[],2) ,'.k-');
 
     hold on
     plot(log10(xc), fit_res(xc),'-r')
 
-    plot(log10(EC50)*[1 1], [0 fit_res.b+(fit_res.a-fit_res.b)/2], '.b-')
-    plot(log10(Conc([1 end]))+[1 0], [1 1]*fit_res.b, '.b-')
+    plot(log10(EC50)*[1 1], [0 .5+Einf/2], '.b-')
+    plot(log10(Conc([1 end]))+[1 0], [1 1]*Einf, '.b-')
 
     plot(log10(xI50)*[1 1], [0 .5], '.b-')
 
@@ -224,7 +223,7 @@ if plotting
 
     title(sprintf('r^2 = %.3f', r2))
     xlim(log10([min(Conc)/extrapolrange extrapolrange*max(Conc)]))
-    ylim([min(min(Growth(:)), max(-.5,1-Einf)) max(Growth(:))*1.05])
+    ylim([min(min(Values(:)), max(-.5,1-Einf)) max(Values(:))*1.05])
 end
 
 
@@ -233,16 +232,16 @@ end
             'Lower',ranges(1,:),...
             'Upper',ranges(2,:),...
             'Startpoint',priors);
-        f = fittype('b + (a-b) ./ ( 1 + (x/c).^d)','options',fitopt);
+        f = fittype('a + (1-a) ./ ( 1 + (x/b).^c)','options',fitopt);
         [fit_result,gof2] = fit(doses', response',f,'Robust',Robust);
     end
 
     function [fit_result, gof2] = flat_fit(doses, response)
         fitopt = fitoptions('Method','NonlinearLeastSquares',...
-            'Lower',ranges(1,2),...   % min Emax
-            'Upper',ranges(2,1),...   % max E0
+            'Lower',ranges(1,1),...   % min Emax
+            'Upper',1.2,...   % max E0
             'Startpoint',priors(1));
-        f = fittype('b+0*x','options',fitopt);
+        f = fittype('a+0*x','options',fitopt);
         [fit_result,gof2] = fit(doses', response',f);
     end
 

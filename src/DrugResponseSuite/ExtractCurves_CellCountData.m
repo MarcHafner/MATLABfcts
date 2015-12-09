@@ -60,7 +60,10 @@ for ik = 1:height(t_keys)
     loop_waitbar(ik, height(t_keys))
     %%
     subt = sortrows(t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:),'Conc');
-%     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
+    % temporary hack for compatibility
+    if ismember('nRelGrowth', subt.Properties.VariableNames)
+        subt.GRvalue = subt.nRelGrowth;
+    end
 
     if height(subt)<4
         warnprintf(['Not enough data point for ' strjoin(table2cellstr(t_keys(ik,:),0))])
@@ -73,19 +76,18 @@ for ik = 1:height(t_keys)
 
     t_temp = t_keys(ik,:);
 
-    if ismember('RelCellCnt', subt.Properties.VariableNames);
-        [IC50, Hill, Einf, Emax, Area, r2, EC50, fit] = ...
+    if ismember('RelCellCnt', subt.Properties.VariableNames)
+        [IC50, Hill, Einf, Emax, AUC, r2, EC50, fit] = ...
             ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
 
-        t_temp = [t_temp table(IC50, Hill, Einf, Emax, Area, r2, EC50) ...
+        t_temp = [t_temp table(IC50, Hill, Einf, Emax, AUC, r2, EC50) ...
             table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
             {'fit' 'Conc' 'RelCellCnt'})];
     end
 
-    if ismember('RelGrowth', subt.Properties.VariableNames);
+    if ismember('RelGrowth', subt.Properties.VariableNames)
         if all(ismember({'Day0Cnt' 'Ctrlcount'}, subt.Properties.VariableNames));
             fitopt2.ranges = [
-                .975 1.025  %E0
                 min(min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1,-.01) 1    %GImax
                 max(min(subt.Conc)*1e-3,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
                 .1 5    % HS
@@ -99,11 +101,11 @@ for ik = 1:height(t_keys)
             table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
     end
 
-    if ismember('nRelGrowth', subt.Properties.VariableNames);
-        [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
-            ICcurve_fit(subt.Conc, subt.nRelGrowth, 'nGI50', fitopt);
-        t_temp = [t_temp table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
-            table({nGI_fit}, {subt.nRelGrowth'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})];
+    if ismember('GRvalue', subt.Properties.VariableNames)
+        [GR50, Hill_GR, GRinf, GRmax, AUC_GR, GR_r2, EC50_GR, GR_fit] = ...
+            ICcurve_fit(subt.Conc, subt.GRvalue, 'GR50', fitopt);
+        t_temp = [t_temp table(GR50, Hill_GR, GRinf, GRmax, AUC_GR, EC50_GR, GR_r2) ...
+            table({GR_fit}, {subt.nRelGrowth'}, 'VariableNames', {'GR_fit' 'GRvalue'})];
     end
 
 t_fits = [t_fits; t_temp];

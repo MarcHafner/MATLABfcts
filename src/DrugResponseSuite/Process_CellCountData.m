@@ -48,7 +48,7 @@ EvaluateGI = any(t_annotated.pert_type=='Untrt') || ...
     length(unique(t_annotated.Time(t_annotated.pert_type=='ctl_vehicle')))>=4; % case for extrapolation
 
 
-labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...
+labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'GRvalue' 'DesignNumber' 'Barcode' ...
     'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
 if ~exist('numericfields','var')
     numericfields = setdiff(t_annotated.Properties.VariableNames( ...
@@ -105,7 +105,7 @@ for iP = 1:height(t_plate)
         Day0Cnt = NaN;
     end
 
-    Relvars = {'RelCellCnt' 'RelGrowth' 'nRelGrowth'};
+    Relvars = {'RelCellCnt' 'RelGrowth' 'GRvalue'};
     t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
 
     % found the control for treated plates (ctl_vehicle)
@@ -132,7 +132,7 @@ for iP = 1:height(t_plate)
 
     if ~EvaluateGI
         t_conditions.RelGrowth = [];
-        t_conditions.nRelGrowth = [];
+        t_conditions.GRvalue = [];
         t_conditions.Day0Cnt = [];
         Relvars = {'RelCellCnt'};
     end

@@ -6,14 +6,17 @@ function t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
 %       - IC50
 %       - Einf (effect -> = 0 if no drug response)
 %       - Hill
-%       - Area (not normalized)
+%       - Area
 %       - EC50
 %   If the relative growth (column RelGrowth) is measured:
 %       - GI50
 %       - GIinf
-%   If the normalized relative growth (column nRelGrowth) is measured:
-%       - GI50
-%       - GIinf
+%   If the normalized relative growth (column GRvalue) is measured:
+%       - GR50
+%       - GRinf
+%       - Hill
+%       - Area
+%       - EC50
 %   All the outputs are saved in a table with annotations including drug
 %   concentrations and initial values.
 %

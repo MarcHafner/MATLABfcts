@@ -10,7 +10,7 @@ function [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plo
 %
 %           plotting :  = 1 , pause for every plot
 %                       = .5, pause 1s for the biased ones
-%                       = 2 (or string for feil name), save everything as a pdf
+%                       = 2 (or string for file name), save everything as a pdf
 %
 
 
@@ -37,7 +37,7 @@ if ~exist('valvars','var') || isempty(valvars)
     valvars = 'Cellcount';
 end
 
-t_plates = unique(t_data(:,{'Barcode','CellLine' 'Time'}));
+t_plates = unique(t_data(:,{'Barcode' 'Time'}));
 
 BiasValue = zeros(height(t_plates), 3);
 clear BiasResults;

@@ -45,7 +45,7 @@ assert(all(ismember([plate_keys cond_keys 'pert_type'], t_processed.Properties.V
 
 
 
-labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...
+labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'GRvalue' 'DesignNumber' 'Barcode' ...
     'Untrt' 'Cellcount' 'Ctrlcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
 if ~exist('numericfields','var')
     numericfields = setdiff(t_processed.Properties.VariableNames( ...
@@ -67,7 +67,7 @@ t_plate = t_plate(t_plate.Time~=0,:);
 
 t_mean = table;
 
-Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_processed));
+Relvars = intersect({'RelCellCnt' 'RelGrowth' 'GRvalue'}, varnames(t_processed));
 % loop through the different plates
 for iP = 1:height(t_plate)
     %

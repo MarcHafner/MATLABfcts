@@ -7,7 +7,7 @@ if nargin==1
 end
 
 [l, d] = length_(x);
-idx = unique([1:floor(l/n):l l]);
+idx = unique([1:max(1,floor(l/n)):l l]);
 
 if istable(x)
     out = x(idx, :);

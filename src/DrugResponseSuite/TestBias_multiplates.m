@@ -69,5 +69,6 @@ end
 
 if plotting == 2
     merge_pdf('./temp_pdf/*pdf', FileName , true)
+    pause(.3)
     rmdir temp_pdf
 end

@@ -13,7 +13,7 @@ if istable(x)
     out = x(idx, :);
 else
     sz = size(x);
-    sz(d) = n;
+    sz(d) = length(idx);
     out = reshape(x, l, []);
     out = reshape(out(idx, :), sz);
 end

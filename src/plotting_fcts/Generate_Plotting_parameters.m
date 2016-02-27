@@ -2,6 +2,14 @@
 
 global Plotting_parameters
 if isempty(Plotting_parameters)
+    
+    Plotting_parameters.GRcmap = [
+    ones(21,1)*[0 0 .2]
+    [zeros(30,2) .2+(1:30)'*.2/30]
+    [(1:50)'*[.8 .2]/50 .4-(1:50)'*.4/50]
+    [.8+(1:50)'*.2/50 .2+(1:50)'*.8/50 (1:50)'*.8/50]
+    [ones(20,2) .8+(1:20)'*.2/20]
+    ones(20,3)];
 
     Plotting_parameters.cmapRB = [ [.9:.001:1]' [0:.01:1]' [0:.01:1]' ;
         [1:-.01:0]' [1:-.01:0]' [1:-.001:.9]' ].^1.2;

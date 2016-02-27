@@ -31,7 +31,7 @@ if exist(outputfile,'file')
     delete(outputfile)
 end
 
-cmd = sprintf('pdftk %s %s output %s', inputfiles, args, outputfile);
+cmd = sprintf('pdftk "%s" %s output "%s"', inputfiles, args, outputfile);
 
 [status, output] = system(cmd);
 assert(status==0, 'pdftk was not successful:\n\n%s', output)

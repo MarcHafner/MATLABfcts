@@ -1,10 +1,10 @@
-function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, plate_keys, cond_keys, varargin)
-% [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
+function [t_GRTime, t_fitsTime] = GR_OverTime(t_data, plate_keys, cond_keys, varargin)
+% [t_GRTime, t_fitsTime] = GR_OverTime(t_data, plate_keys, cond_keys, keys, varargin)
 %   Normalized relative growth for different time intervals.
 %   Sigmoidal fit on the drug response data (expect concentration in uM) to
 %   extract the following parameters:
-%       - GI50
-%       - GIinf
+%       - GR50
+%       - GRinf
 %   All the outputs are saved in a table with annotations including drug
 %   concentrations and initial values.
 %
@@ -54,7 +54,7 @@ t_keys = unique(t_data(t_data.DrugName~='-',setdiff([plate_keys cond_keys], {'Ti
 
 
 t_fitsTime = table;
-t_nGITime = table;
+t_GRTime = table;
 for ik = 1:height(t_keys)
     fprintf([strjoin(table2cellstr(t_keys(ik,:),0),'|') ' :']);
     %%
@@ -87,35 +87,35 @@ for ik = 1:height(t_keys)
                 ismember(subt.Time, Times([iT idxEnd(iTE)])),:), ...
                 @mean, 'keyvars', [plate_keys cond_keys 'Conc']), 'Time');
 
-            nGI = NaN(length(Conc),1);
+            GR = NaN(length(Conc),1);
             parfor iC = 1:length(Conc)
                 idx0 = t_trt.Time==Times(iT) & t_trt.Conc==Conc(iC);
                 idxE = t_trt.Time==Times(idxEnd(iTE)) & t_trt.Conc==Conc(iC);
                 trt_AvDivRate = log2(t_trt.Cellcount(idxE)/t_trt.Cellcount(idx0))/ ...
                     ((Times(idxEnd(iTE)) - Times(iT))/24);
-                nGI(iC) = 2^(trt_AvDivRate/Ctrl_AvDivRate(iTE)) -1;
+                GR(iC) = 2^(trt_AvDivRate/Ctrl_AvDivRate(iTE)) -1;
             end
 
-            t_nGITime = [t_nGITime;
+            t_GRTime = [t_GRTime;
                 [repmat([t_keys(ik,:), table(Times(iT), Times(idxEnd(iTE)),...
                 diff(Times([iT idxEnd(iTE)])),  NDiv(iTE), ...
                 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'})], length(Conc),1) ...
-                table(Conc, nGI)]];
+                table(Conc, GR)]];
             if nargout>1 && (length(Conc) > 4 || p.forcefit>0)
                 if length(Conc) <= 4
                     n = 4-length(Conc)+ceil(p.forcefit);
                     Conc = [min(Conc).*(10.^(-n:-1)'); Conc];
-                    nGI = [ones(n,1)*mean([1 max(nGI)]); nGI];
+                    GR = [ones(n,1)*mean([1 max(GR)]); GR];
                 end
 
                 fitopt.pcutoff = p.pcutoff;
-                [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
-                    ICcurve_fit(Conc, nGI, 'nGI50', fitopt);
+                [GR50, ~, GRinf, GRmax, AUC_GR, GR_r2, ~, GR_fit] = ...
+                    ICcurve_fit(Conc, GR, 'GR50', fitopt);
                 t_fitsTime = [t_fitsTime;
                     [t_keys(ik,:) table(Times(iT), Times(idxEnd(iTE)), diff(Times([iT idxEnd(iTE)])), ...
                     NDiv(iTE), 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'}), ...
-                    table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
-                    table({nGI_fit}, {nGI'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})]];
+                    table(GR50, GRinf, GRmax, AUC_GR, GR_r2) ...
+                    table({GR_fit}, {GR'}, 'VariableNames', {'GR_fit' 'GRvalue'})]];
             end
         end
 
@@ -124,13 +124,13 @@ for ik = 1:height(t_keys)
 end
 
 % matching the times to avoid rounding issues
-uDt = unique(t_nGITime.DeltaT);
+uDt = unique(t_GRTime.DeltaT);
 matchDt = [uDt cumsum([0;diff(uDt)>.5])];
 for i=1:max(matchDt(:,2))
-    t_nGITime.DeltaT(ismember(t_nGITime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
+    t_GRTime.DeltaT(ismember(t_GRTime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
         round(mean(matchDt(matchDt(:,2)==i,1)),2);
 end
-t_nGITime.Time = t_nGITime.T0 + t_nGITime.DeltaT/2;
+t_GRTime.Time = t_GRTime.T0 + t_GRTime.DeltaT/2;
 
 if ~isempty(t_fitsTime)
     uDt = unique(t_fitsTime.DeltaT);

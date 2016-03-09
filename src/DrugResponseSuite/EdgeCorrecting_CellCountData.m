@@ -88,7 +88,7 @@ end
 
 if plotting==1 || (plotting==.5 && biased)
 
-    plate = table_to_ndarray(t_in, 'keyvars', {'Row' 'Column'}, ...
+    plate = table2ndarray(t_in, 'keyvars', {'Row' 'Column'}, ...
         'outer', 1, 'valvars',  'Cellcount');
 
     get_newfigure(999, [40 100 400 300])

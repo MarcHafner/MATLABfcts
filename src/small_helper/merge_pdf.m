@@ -16,25 +16,40 @@ function merge_pdf(inputfiles, outputfile, del, args)
 %
 
 if ~exist('args','var')
-    args = 'cat';
+    if ismac
+        args = '';
+    else
+        args = 'cat';
+    end
 end
 
 
 
 
-d = pwd;
-% absolute path needed for MS-DOS
-inputfiles = [d filesep ReplaceName(inputfiles, '/\', filesep)];
-outputfile = [d filesep ReplaceName(outputfile, '/\', filesep)];
 
 if exist(outputfile,'file')
     delete(outputfile)
 end
 
-cmd = sprintf('pdftk "%s" %s output "%s"', inputfiles, args, outputfile);
+if ismac
+    inputfiles = strjoin(regexp(inputfiles,' ','split'), '\\ ');
+    link = '"/System/Library/Automator/Combine PDF Pages.action/Contents/Resources/join.py"';
+    cmd = sprintf('%s %s -o "%s" %s', link, args, outputfile, inputfiles);
+    [status, output] = system(cmd);
+    assert(status==0, 'combine PDF was not successful:\n\n%s', output)
+    disp(output)
+else
+    d = pwd;
+    % absolute path
+    inputfiles = [d filesep ReplaceName(inputfiles, '/\', filesep)];
+    outputfile = [d filesep ReplaceName(outputfile, '/\', filesep)];
+    link = 'pdftk';
+    cmd = sprintf('%s "%s" cat %s output "%s"', link, inputfiles, args, outputfile);
+    
+    [status, output] = system(cmd);
+    assert(status==0, 'pdftk was not successful:\n\n%s', output)
+end
 
-[status, output] = system(cmd);
-assert(status==0, 'pdftk was not successful:\n\n%s', output)
 
 if exist('del','var') && del
     n = dir(inputfiles);

@@ -59,13 +59,24 @@ for ik = 1:height(t_keys)
     fprintf([strjoin(table2cellstr(t_keys(ik,:),0),'|') ' :']);
     %%
     subt = t_data(eqtable(t_keys(ik,:), t_data(:,[plate_keys cond_keys])),:);
-    t_ctrl = sortrows(collapse(t_data(eqtable(t_keys(ik,:), t_data(:,setdiff(plate_keys,'DrugName'))) & ...
-        t_data.pert_type=='ctl_vehicle' ,:), @mean, 'keyvars', plate_keys), 'Time');
+    t_ctrl = collapse(t_data(eqtable(t_keys(ik,:), t_data(:,setdiff(plate_keys,'DrugName'))) & ...
+        t_data.pert_type=='ctl_vehicle' ,:), @mean, 'keyvars', plate_keys);
 
+    if isvariable(subt, 'Day0Cnt')
+        t_0 = unique(subt(:,setdiff([plate_keys cond_keys 'Conc' 'Day0Cnt'], 'Time')));
+        t_0.Cellcount = t_0.Day0Cnt;
+        t_0.Time = zeros(height(t_0),1);
+        warning('off', 'MATLAB:table:RowsAddedExistingVars')
+        subt(end+(1:height(t_0)), varnames(t_0)) = t_0;
+        t_0ctrl = t_0(1,:); t_0ctrl.Conc=0; t_0ctrl.DrugName = '-';
+        t_ctrl(end+1, varnames(t_0ctrl)) = t_0ctrl;
+        warning('on', 'MATLAB:table:RowsAddedExistingVars')
+    end
+    t_ctrl = sortrows(t_ctrl, 'Time');
     Times = t_ctrl.Time;
     assert(all(Times==unique(Times)));
 
-    for iT = find(Times'>p.minT0)
+    for iT = find(Times'>=p.minT0)
         assert(t_ctrl.Time(iT)==Times(iT));
         % control
         Ctrl_DeltaT = (t_ctrl.Time((iT+1):end) - t_ctrl.Time(iT))/24;

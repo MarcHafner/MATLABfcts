@@ -85,6 +85,12 @@ for iPW = 1:height(t_processed)
 
     if exist('filefilter','var')
         files = dir([subfolder filesep '*' filefilter '*.t*']); % for tsv or txt files
+        if isempty(files)
+            dirs = dir([subfolder filesep '*']);
+            dirs = setdiff({dirs([dirs.isdir]).name},{'.', '..'});
+            subfolder = [subfolder filesep dirs{1}];
+            files = dir([subfolder filesep '*' filefilter '*.t*']);
+        end
     else
         files = dir([subfolder filesep '*.t*']); % for tsv or txt files
     end
@@ -105,13 +111,18 @@ for iPW = 1:height(t_processed)
     files_WI = files(regexpcell(files, 'Whole Image')>0);
     files = files(regexpcell(files, 'Whole Image')==0);
     if ~timecourse || isvariable(t_processed,'Date')
-        assert(length(files)==1, ['Too many files: ' strjoin(files,' - ')])
+        warnassert(length(files)==1, ['Too many files: ' strjoin(files,' || ')])
+        files = files(1);
     end
 
     for it = 1:length(files)
-        date = regexp(files{it},'^([0-9\-]*)T','tokens');
-        time = regexp(files{it}, '^[0-9\-]*T([0-9]*)\-', 'tokens');
-        Date = datenum([date{1}{1} '-' time{1}{1}], 'yyyy-mm-dd-HHMMSS');
+        try
+            date = regexp(files{it},'^([0-9\-]*)T','tokens');
+            time = regexp(files{it}, '^[0-9\-]*T([0-9]*)\-', 'tokens');
+            Date = datenum([date{1}{1} '-' time{1}{1}], 'yyyy-mm-dd-HHMMSS');
+        catch
+            Date = '';
+        end
 
         t_ss = tsv2table([subfolder filesep files{it}]);
 

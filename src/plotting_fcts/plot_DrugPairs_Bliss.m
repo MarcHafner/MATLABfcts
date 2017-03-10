@@ -34,7 +34,7 @@ for iDp=1:height(t_DrugPairs)
     if iDp==1
         hc = colorbar;
         set(hc,'position',[.95 .62 .01 .3],Plotting_parameters.axes{:})
-        ylabel(hc,'Relative growth', Plotting_parameters.axislabel{:})
+        ylabel(hc,'GRvalue', Plotting_parameters.axislabel{:})
         ylim(hc,[-1 1.1])
     end
 

@@ -20,7 +20,16 @@ if (length(varargin)==1 || mod(length(varargin),2)==1) && varargin{1}(end-3)=='.
     varargin = ['filename' varargin];
 end
 
+if ismac
+    position = position .* [1 1 7/9 7/9];
+end
 
-set(gcf, 'color','w','paperunits','inches', 'PaperPositionMode', 'auto');
-set(gcf,'papersize', [position(3)/90 position(4)/90]);
+set(gcf, 'color','w', 'paperunits','inches', 'PaperPositionMode', 'auto');
+
+if ismac
+    set(gcf,'papersize', [position(3)/70 position(4)/70]);
+else
+    set(gcf,'papersize', [position(3)/90 position(4)/90]);
+end
+
 set(gcf, 'position', position, varargin{:});

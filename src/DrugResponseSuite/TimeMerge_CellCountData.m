@@ -46,7 +46,7 @@ end
 t_plates = unique(t_processed(:,plate_keys));
 t_Tmean = table;
 var50 = varnames(t_processed);
-var50 = var50(regexpcell(var50,'50$')>0);
+var50 = var50(regexpcell(var50,'50')>0);
 for iV = 1:length(var50)
     fprintf('  -> %s mean is performed in the log10 domain\n', var50{iV});
     t_processed.(var50{iV}) = log10(t_processed.(var50{iV}));

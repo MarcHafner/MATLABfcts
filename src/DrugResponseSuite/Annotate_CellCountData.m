@@ -148,6 +148,7 @@ for iTf = 1:length(Trtfiles)
         temp.Untrt(temp.pert_type=='Untrt') = true;
 
         if ~isempty(t_annotated)
+            % new vars found in temp only
             newvars = setdiff(varnames(temp), varnames(t_annotated));
             for i=1:length(newvars)
                 if isnumeric(temp.(newvars{i}))
@@ -159,7 +160,20 @@ for iTf = 1:length(Trtfiles)
                         newvars(i))];
                 end
             end
-            t_annotated = [t_annotated(:,varnames(temp)); temp];
+            %  vars in annotated not found in temp
+            newvars = setdiff(varnames(t_annotated), varnames(temp));
+            for i=1:length(newvars)
+                if isnumeric(t_annotated.(newvars{i}))
+                    temp = [temp ...
+                        table(NaN(height(temp),1), 'variablenames', newvars(i))];
+                else
+                    temp = [temp ...
+                        table(repmat({'-'},height(temp),1), 'variablenames', ...
+                        newvars(i))];
+                end
+            end
+                
+            t_annotated = [t_annotated; temp(:,varnames(t_annotated))];
         else
             t_annotated = temp;
         end

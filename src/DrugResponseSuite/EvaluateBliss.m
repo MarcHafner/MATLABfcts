@@ -35,7 +35,7 @@ function [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, Bl
 %
 
 if ~exist('varname','var') || isempty(varname)
-    varname = 'RelGrowth';
+    varname = 'GRvalue';
 else
     assert(isvariable(t_data,varname), ...
         '%s is not a header of the table t_data', varname)
@@ -68,7 +68,7 @@ end
 
 %%
 if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
-        mean(Results(:)>0)>.5 && ~strcmp(varname,'RelGrowth')) || ...
+        mean(Results(:)>0)>.5 && ~ismember(varname,{'RelGrowth' 'GRvalue'})) || ...
         (exist('BlissType','var') && BlissType==0)
     % generally increasing with dose --> calculate Bliss as x*y
     Bliss = Results - repmat(Results(1,:),size(Results,1),1) - ...
@@ -82,7 +82,7 @@ if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
 
     SelectIdx1 = find(Results(:,1)<=SingleCutoff);
     SelectIdx2 = find(Results(1,:)<=SingleCutoff);
-elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'RelCellCnt'})) || ...
+elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'GRvalue' 'RelCellCnt'})) || ...
         (exist('BlissType','var') && BlissType==1)
     % mainly decreasing with dose, normalized at 1 --> calculate Bliss as (1-x)*(1-y)
     % of Relative cell growth/count

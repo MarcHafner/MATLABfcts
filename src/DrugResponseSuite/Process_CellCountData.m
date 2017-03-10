@@ -46,7 +46,8 @@ assert(all(ismember([plate_keys cond_keys 'pert_type'], t_annotated.Properties.V
 EvaluateGI = any(t_annotated.pert_type=='Untrt') || ...
     any(t_annotated.pert_type=='ctl_vehicle' & t_annotated.Time==0) || ...
     length(unique(t_annotated.Time(t_annotated.pert_type=='ctl_vehicle')))>=4; % case for extrapolation
-
+% decide if evaluating death count
+EvaluateDead = isvariable(t_annotated,'Deadcount');
 
 labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'GRvalue' 'DesignNumber' 'Barcode' ...
     'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
@@ -81,6 +82,9 @@ for iP = 1:height(t_plate)
         idx = eqtable(temp, t_annotated);
         if any(idx)
             Day0Cnt = trimmean(t_annotated.Cellcount(idx), 50);
+            if EvaluateDead
+                Day0DeadCnt = trimmean(t_annotated.Deadcount(idx), 50);
+            end
         else
             if ~DisplayTC
                 disp('Extrapolating Day0 from time course')
@@ -95,19 +99,26 @@ for iP = 1:height(t_plate)
                 warnprintf('Expecting a time course, but less than 5 time points --> no Day0')
                 EvaluateGI = false;
                 Day0Cnt = NaN;
+                Day0DeadCnt = NaN;
             else
                 cnt_t0 = exp(log(subt.Cellcount(1)) - subt.Time(1)*...
                     (log(subt.Cellcount)-log(subt.Cellcount(1)))./(subt.Time-subt.Time(1)));
                 Day0Cnt = mean(cnt_t0([2 3 3 4]));
+                
+                if EvaluateDead
+                    Dcnt_t0 = exp(log(subt.Deadcount(1)) - subt.Time(1)*...
+                        (log(subt.Deadcount)-log(subt.Deadcount(1)))./(subt.Time-subt.Time(1)));
+                    Day0DeadCnt = mean(Dcnt_t0([2 3 3 4]));
+                end
             end
         end
     else
         Day0Cnt = NaN;
     end
-
+    
     Relvars = {'RelCellCnt' 'RelGrowth' 'GRvalue'};
     t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
-
+    
     % found the control for treated plates (ctl_vehicle)
     t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
     assert(height(t_ctrl)>0, 'No control found for %s --> check ''pert_type''', ...
@@ -120,6 +131,11 @@ for iP = 1:height(t_plate)
         t_ctrl.Properties.VariableNames{numericfields{i}} = ['Ctrl_' numericfields{i}];
     end
     t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
+    
+    if EvaluateGI && EvaluateDead
+        t_ctrl = [t_ctrl table(repmat(Day0DeadCnt, height(t_ctrl),1), ...
+            'VariableNames', {'Day0DeadCnt'})];
+    end
 
     % report the ctrl values in the table
     t_conditions = innerjoin(t_conditions, t_ctrl);

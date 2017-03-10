@@ -47,7 +47,7 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %
 %
 
-global WorkFolder
+global DropBoxFolder
 
 % default values (can be specified as input parameters)
 p = inputParser;
@@ -62,7 +62,7 @@ addParameter(p,'Outputfolder', '', @ischar);
 addParameter(p,'Outputname', '', @ischar);
 addParameter(p,'label', '', @ischar);
 addParameter(p,'verbatim', false, @islogical);
-addParameter(p,'GSEAfolder', [WorkFolder 'GSEA_java' filesep], @ischar);
+addParameter(p,'GSEAfolder', ['~/GSEA_java' filesep], @ischar);
 
 parse(p,varargin{:});
 p = p.Results;
@@ -106,27 +106,33 @@ Setfile = [tempfolder 'tempset.gmt'];
 if ischar(Geneset)
     switch Geneset
         case 'GOmf'
-            Setfile = [GSEAfolder 'c5.mf.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c5.mf.v5.2.symbols.gmt'];
         case 'GObp'
-            Setfile = [GSEAfolder 'c5.bp.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c5.bp.v5.2.symbols.gmt'];
         case 'GOcc'
-            Setfile = [GSEAfolder 'c5.cc.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c5.cc.v5.2.symbols.gmt'];
         case 'allGO'
-            Setfile = [GSEAfolder 'c5.all.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c5.all.v5.2.symbols.gmt'];
         case 'KEGG'
-            Setfile = [GSEAfolder 'c2.cp.kegg.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c2.cp.kegg.v5.2.symbols.gmt'];
         case 'Reactome'
-            Setfile = [GSEAfolder 'c2.cp.reactome.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c2.cp.reactome.v5.2.symbols.gmt'];
         case 'Biocarta'
-            Setfile = [GSEAfolder 'c2.cp.biocarta.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c2.cp.biocarta.v5.2.symbols.gmt'];
         case 'CGN'  % cancer gene neighborhoods
-            Setfile = [GSEAfolder 'c4.cgn.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c4.cgn.v5.2.symbols.gmt'];
         case 'CGP'  % chemical and genetic perturbations
-            Setfile = [GSEAfolder 'c2.cgp.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c2.cgp.v5.2.symbols.gmt'];
         case 'BreastCGP'  % chemical and genetic perturbations
             Setfile = [GSEAfolder 'cgp_breast_cancer.gmt'];
         case 'OncoSig'  % oncogenic signatures gene sets
-            Setfile = [GSEAfolder 'c6.all.v4.0.symbols.gmt'];
+            Setfile = [GSEAfolder 'c6.all.v5.2.symbols.gmt'];
+        case 'CM'  % cancer modules
+            Setfile = [GSEAfolder 'c4.cm.v5.2.symbols.gmt'];
+        case 'TF'  % cancer modules
+            Setfile = [GSEAfolder 'c3.tft.v5.2.symbols.gmt'];
+        case 'H'  % hallmarks
+            Setfile = [GSEAfolder 'h.all.v5.2.symbols.gmt'];
         otherwise
             assert(exist(Geneset,'file')==2, 'Geneset file not found')
             [~,~,ext] = fileparts(Geneset);
@@ -143,19 +149,24 @@ end
 % Broad http address for the file: ftp.broadinstitute.org://pub/gsea/gene_sets/
 
 % add the dataset in the label if not present
-if ismember(Geneset, {'GOmf' 'GObp'})
-    if isempty(strfind(label, Geneset))
-        label = [label '_' Geneset];
-    end
-    if ~exist(Setfile, 'file')
-        [~,Setfile] = fileparts(Setfile);
-        Setfile = ['ftp.broadinstitute.org://pub/gsea/gene_sets/' Setfile '.gmt'];
-    end
+if isempty(label)
+    label = ['_' Geneset];
 end
+% if ismember(Geneset, {'GOmf' 'GObp'})
+%     if isempty(strfind(label, Geneset))
+%         label = [label '_' Geneset];
+%     end
+%     if ~exist(Setfile, 'file')
+%         disp(Setfile)
+%         ls(GSEAfolder)
+%         [~,Setfile] = fileparts(Setfile);
+%         Setfile = ['ftp.broadinstitute.org://pub/gsea/gene_sets/' Setfile '.gmt'];
+%     end
+
 
 %% construct the command
 cmd = [ ...
-    'java -Xmx1024m -cp ' GSEAfolder 'gsea2-2.1.0.jar' ...
+    'java -Xmx1024m -cp ' GSEAfolder 'gsea2-2.2.3.jar' ...
     ' xtools.gsea.GseaPreranked' ...
     ' -gmx ' Setfile ...
     ' -collapse false -mode Max_probe -norm meandiv -nperm ' num2str(p.nperm) ...

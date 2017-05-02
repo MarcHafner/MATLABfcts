@@ -21,7 +21,7 @@ if isempty(Plotting_parameters)
     Plotting_parameters.cmapBW = [ [0:.01:1]' [0:.01:1]' [.9:.001:1]' ];
     Plotting_parameters.cmapWB = Plotting_parameters.cmapBW(end:-1:1,:);
 
-    Plotting_parameters.cmapYBB = [ [1:-.009:.1]' [1:-.009:.1]' [.01:-.0001:0]' ;
+    Plotting_parameters.cmapYBB = [ [1:-.01:0]' [1:-.01:0]' [.01:-.0001:0]' ;
         [0:.001:.1]' [0:.001:.1]' [0:.01:1]' ].^.7;
     Plotting_parameters.cmapBBY = Plotting_parameters.cmapYBB(end:-1:1,:);
 

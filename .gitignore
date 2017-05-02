@@ -6,3 +6,4 @@
 *.mexw32
 *.mexw64
 *.asv
+.DS_Store

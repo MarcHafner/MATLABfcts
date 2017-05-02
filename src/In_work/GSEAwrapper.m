@@ -82,7 +82,7 @@ end
 if isempty(Outputfolder)
     Outputfolder = tempfolder;
     if p.Nplot>0
-        warnprintf('To plot results, sepcify an ''Outpufolder'' -> Nplot=0')
+        warnprintf('To plot results, specify an ''Outputfolder'' -> Nplot=0')
     end
     p.Nplot = 0;
 elseif ~exist(Outputfolder,'dir')
@@ -142,6 +142,7 @@ if ischar(Geneset)
 elseif iscellstr(Geneset)
     assert(size(Geneset,2)==3, 'Geneset as a cellstr should be a nx3 array')
     cell2tsv(Setfile, Geneset);
+    Geneset = 'custom';
 else
     error('unknown format for Geneset')
 end

@@ -1,4 +1,4 @@
-function h = clustergram_wBars(data, rowlabels,  columnlabels, varargin)
+function [h, permRows, permCols, TreeRows, TreeColumns, RowBar_Axes, ColBar_Axes] = clustergram_wBars(data, rowlabels,  columnlabels, varargin)
 % h = clustergram_wBars(data, rowlabels,  columnlabels, varargin)
 %
 %   options:
@@ -76,8 +76,9 @@ end
 
 % Row color bars
 h_RowBars = cell(size(rowannotations,2),1);
+RowBar_Axes = [];
 for iR = 1:size(rowannotations,2)
-    get_newaxes([outerpos(1)+(iR-1)*p.rowbarwidth innerpos(2) p.rowbarwidth-.005 innerpos(4)],1)
+    RowBar_Axes(iR) = get_newaxes([outerpos(1)+(iR-1)*p.rowbarwidth innerpos(2) p.rowbarwidth-.005 innerpos(4)],1);
 
     h_RowBars{iR} = [];
     cases = unique(rowannotations.(iR));
@@ -126,8 +127,9 @@ end
 
 % Column color bars
 h_ColBars = cell(size(columnannotations,2),1);
+ColBar_Axes = [];
 for iR = 1:size(columnannotations,2)
-    get_newaxes([innerpos(1) outerpos(2)+outerpos(4)-iR*p.colbarwidth+.005 innerpos(3) p.colbarwidth-.005],1)
+    ColBar_Axes(iR) = get_newaxes([innerpos(1) outerpos(2)+outerpos(4)-iR*p.colbarwidth+.005 innerpos(3) p.colbarwidth-.005],1);
 
     h_ColBars{iR} = [];
     cases = unique(columnannotations.(iR));

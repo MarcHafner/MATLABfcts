@@ -1,8 +1,12 @@
-function savegcf(filename)
+function savegcf(filename,opengl)
 % savegcf(filename)
 
-set(gcf,'Renderer','painters')
-if nargin==0
+if exist('opengl', 'var') && opengl 
+    set(gcf,'Renderer','opengl')
+else
+    set(gcf,'Renderer','painters')
+end
+if nargin==0 || isempty(filename)
     saveas(gcf,get(gcf,'FileName'))
 else
     saveas(gcf,filename)

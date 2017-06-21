@@ -20,7 +20,8 @@ function [t_GRTime, t_fitsTime] = GR_OverTime(t_data, plate_keys, cond_keys, var
 %               - 'pcutoff'     [0.1] cutoff for the p-value of a F-test against a flat line.
 %               - 'forcefit'    [false], force a fit by adding value a low
 %                                   concentrations,
-%
+%               - 'AvUntrtRate' [false] use an average rate for the
+%                                   normalization
 
 
 p = inputParser;
@@ -29,6 +30,7 @@ addParameter(p, 'MinDt',   8, @isscalar);
 addParameter(p, 'MaxDt',   96, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
 addParameter(p, 'pcutoff', .1, @isscalar);
+addParameter(p, 'AvUntrtRate', false, @islogical);
 addParameter(p, 'forcefit', false, @isscalar);
 parse(p,varargin{:})
 p = p.Results;
@@ -75,7 +77,24 @@ for ik = 1:height(t_keys)
     t_ctrl = sortrows(t_ctrl, 'Time');
     Times = t_ctrl.Time;
     assert(all(Times==unique(Times)));
-
+    
+    if p.AvUntrtRate
+        Ctrl_AvDivRate0 = [];
+        for iT = find(Times'>=p.minT0)
+            assert(t_ctrl.Time(iT)==Times(iT));
+            % control
+            Ctrl_DeltaT = (t_ctrl.Time((iT+1):end) - t_ctrl.Time(iT))/24;
+            NDiv = log2(t_ctrl.Cellcount((iT+1):end)/t_ctrl.Cellcount(iT));
+            Ctrl_AvDivRate = log2(t_ctrl.Cellcount((iT+1):end)/t_ctrl.Cellcount(iT))./Ctrl_DeltaT;
+            idxEnd = find(Ctrl_DeltaT>=p.MinDt/24 & NDiv>=p.MinNDiv & Ctrl_DeltaT<=p.MaxDt/24);
+            if any(idxEnd)
+                Ctrl_AvDivRate0(iT) = Ctrl_AvDivRate(idxEnd);
+            end
+        end
+        Ctrl_AvDivRate0 = quantile(Ctrl_AvDivRate0(Ctrl_AvDivRate0>0),.75);
+    end
+    
+    
     for iT = find(Times'>=p.minT0)
         assert(t_ctrl.Time(iT)==Times(iT));
         % control
@@ -86,6 +105,10 @@ for ik = 1:height(t_keys)
         idxEnd = find(Ctrl_DeltaT>=p.MinDt/24 & NDiv>=p.MinNDiv & Ctrl_DeltaT<=p.MaxDt/24);
         NDiv = NDiv(idxEnd);
         Ctrl_AvDivRate = Ctrl_AvDivRate(idxEnd);
+        if p.AvUntrtRate
+            Ctrl_AvDivRate(:) = Ctrl_AvDivRate0;
+        end
+        
         idxEnd = iT + idxEnd;
         fprintf(sprintf(' %.0f(%i);', Times(iT), length(idxEnd)));
         if mod(iT,10)==0, fprintf('\n'); end

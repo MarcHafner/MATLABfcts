@@ -155,26 +155,20 @@ for iP = 1:height(t_plate)
             (t_conditions.Ctrlcount - t_conditions.Day0Cnt);
         gr = log2(t_conditions.Cellcount./t_conditions.Day0Cnt);
         gr_ctrl = log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt);
+        
+        Time = t_conditions.Time;
+        if any(Time>14)
+            % time in hours -> transform in days
+            warnprintf('Time transformed in days for normalization of GR_d')
+            Time = Time/24;
+        end
+        
+        GR_s = 2.^((1+Dratio).*gr./((1+Dratio_ctrl).*gr_ctrl))-1;
+        GR_d = 2.^( ( (Dratio_ctrl).*gr_ctrl - (Dratio).*gr )./Time )-1;
 
-        t_conditions = [t_conditions array2table([ 2.^((1+Dratio).*gr./((1+Dratio_ctrl).*gr_ctrl))-1 ...
-            2.^( ( (Dratio_ctrl).*gr_ctrl - (Dratio).*gr )./(t_conditions.Time/24) )-1 ], ...
+        t_conditions = [t_conditions array2table([ GR_s  GR_d ], ...
             'variablenames', {'GR_s' 'GR_d'})];
-        
-%         Dratio = max(t_conditions.Deadcount - t_conditions.Day0DeadCnt,1)./...
-%             (t_conditions.Cellcount - t_conditions.Day0Cnt);
-%         Ctrl_Dratio = max(t_conditions.Ctrl_Deadcount - t_conditions.Day0DeadCnt,1)./...
-%             max(t_conditions.Ctrlcount - t_conditions.Day0Cnt,1);
-%         
-%         gr = log2(t_conditions.Cellcount./t_conditions.Day0Cnt);
-%         gr0 = log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt);
-%         
-%         t_conditions = [t_conditions array2table([ 2.^((1+Dratio).*gr./((1+Ctrl_Dratio).*gr0))-1 ...
-%             2.^((Ctrl_Dratio.*gr0) - (Dratio.*gr) )-1 ], ...
-%             'variablenames', {'GR_s' 'GR_d'})];
-        
-%         t_conditions = [t_conditions array2table([ 2.^((1+Dratio).*gr)-1  2.^(Dratio.*gr)-1 ], ...
-%             'variablenames', {'GR_s' 'GR_d'})];
-        
+                
     end
 
     if ~EvaluateGR

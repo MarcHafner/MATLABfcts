@@ -72,6 +72,8 @@ t_plate = t_plate(t_plate.Time~=0,:);
 t_processed = table;
 t_mean = table;
 DisplayTC = false;
+t_toofew = table();
+t_toomany = table();
 % loop through the different plates
 for iP = 1:height(t_plate)
     %
@@ -125,7 +127,7 @@ for iP = 1:height(t_plate)
     t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
     assert(height(t_ctrl)>0, 'No control found for %s --> check ''pert_type''', ...
         strjoin(strcat(table2cellstr( t_plate(iP,:), 0)), '|'))
-
+    
     t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), ...
         'keyvars', plate_keys, ...
         'valvars', [{'Cellcount'} numericfields]);
@@ -139,44 +141,97 @@ for iP = 1:height(t_plate)
         t_ctrl = [t_ctrl table(repmat(Day0DeadCnt, height(t_ctrl),1), ...
             'VariableNames', {'Day0DeadCnt'})];
     end
-
+    
     % report the ctrl values in the table
     t_conditions = innerjoin(t_conditions, t_ctrl);
     % evaluate the relative cell count/growth
     t_conditions = [t_conditions array2table([t_conditions.Cellcount./t_conditions.Ctrlcount ...
         2.^(log2(t_conditions.Cellcount./t_conditions.Day0Cnt)./log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt))-1], ...
         'variablenames', Relvars)];
-
+    
     if EvaluateGR && EvaluateDead
         
-        Dratio = max(t_conditions.Deadcount - t_conditions.Day0DeadCnt,1)./...
-            (t_conditions.Cellcount - t_conditions.Day0Cnt);
-        Dratio_ctrl = max(t_conditions.Ctrl_Deadcount - t_conditions.Day0DeadCnt,1)./...
-            (t_conditions.Ctrlcount - t_conditions.Day0Cnt);
-        gr = log2(t_conditions.Cellcount./t_conditions.Day0Cnt);
-        gr_ctrl = log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt);
+        t_c = t_conditions;
+        %%%% capping of extreme values
+        % if missing cells -> assign to dead cells
+        cond_idx = (t_c.Deadcount+t_c.Cellcount) < ...
+            .95*(t_c.Day0Cnt + t_c.Day0DeadCnt);
+        if any(cond_idx)
+            %             warnprintf('%i conditions with too few cells -> assigned as dead cells', sum(cond_idx))
+            t_toofew = [t_toofew
+                t_c(cond_idx,{'CellLine' 'DrugName'})];
+            
+            t_c.Deadcount(cond_idx) = max( t_c.Deadcount(cond_idx) , ...
+                (t_c.Day0Cnt(cond_idx) + t_c.Day0DeadCnt(cond_idx)) - ...
+                floor(.95*t_c.Cellcount(cond_idx)) +1);
+        end
         
-        Time = t_conditions.Time;
+        % if too many dead cells -> subtract dead cells
+        cond_idx = t_c.pert_type~='ctl_vehicle' & (t_c.Deadcount+t_c.Cellcount > ...
+            1.15*(t_c.Ctrlcount + t_c.Ctrl_Deadcount));
+        if any(cond_idx)
+            %             warnprintf('%i conditions with too many cells -> remove dead cells', sum(cond_idx))
+            t_toomany = [t_toomany
+                t_c(cond_idx,{'CellLine' 'DrugName'})];
+            
+            t_c.Deadcount(cond_idx) = min( t_c.Deadcount(cond_idx) , ...
+                (t_c.Ctrlcount(cond_idx) + t_c.Ctrl_Deadcount(cond_idx)) - ...
+                ceil(1.15*t_c.Cellcount(cond_idx)) -1);
+        end
+        
+        Time = t_c.Time;
         if any(Time>14)
             % time in hours -> transform in days
-            warnprintf('Time transformed in days for normalization of GR_d')
+            %             warnprintf('Time transformed in days for normalization of GR_d')
             Time = Time/24;
         end
         
+        Dratio = max(t_c.Deadcount - t_c.Day0DeadCnt,1)./...
+            (t_c.Cellcount - t_c.Day0Cnt);
+        Dratio_ctrl = max(t_c.Ctrl_Deadcount - t_c.Day0DeadCnt,1)./...
+            (t_c.Ctrlcount - t_c.Day0Cnt);
+        gr = log2(t_c.Cellcount./t_c.Day0Cnt);
+        gr_ctrl = log2(t_c.Ctrlcount./t_c.Day0Cnt);
+        
         GR_s = 2.^((1+Dratio).*gr./((1+Dratio_ctrl).*gr_ctrl))-1;
         GR_d = 2.^( ( (Dratio_ctrl).*gr_ctrl - (Dratio).*gr )./Time )-1;
-
+        
+        Eqidx = (abs(t_c.Cellcount - t_c.Day0Cnt)./t_c.Cellcount)<1e-10;
+        if any(Eqidx)
+            warnprintf('Some conditions with t_c.Cellcount ~= t_c.Day0Cnt -> finite evaluation')
+            % issue when t_c.Cellcount == t_c.Day0Cnt -> Taylor series
+            disp(t_c(Eqidx,:))
+            a = t_c.Cellcount(Eqidx);
+            b = t_c.Day0Cnt(Eqidx);
+            
+            Dratio_gr = max(t_c.Deadcount(Eqidx) - t_c.Day0DeadCnt(Eqidx),1)* ...
+                (1./b + diag(( repmat((-1)*(a-b),1,35).^repmat(1:35,length(a),1) ) * ...
+                (repmat(b,1,35).*repmat(1:35,length(b),1))')  );
+            
+            GR_s(Eqidx) = 2.^((gr(Eqidx)+Dratio_gr)./((1+Dratio_ctrl(Eqidx)).*gr_ctrl(Eqidx)))-1;
+            GR_d(Eqidx) = 2.^( ( (Dratio_ctrl(Eqidx)).*gr_ctrl(Eqidx) - Dratio_gr )./Time )-1;
+        end
+        
         t_conditions = [t_conditions array2table([ GR_s  GR_d ], ...
             'variablenames', {'GR_s' 'GR_d'})];
-                
     end
-
+    
     if ~EvaluateGR
         t_conditions.GRvalue = [];
         t_conditions.Day0Cnt = [];
         Relvars = {'RelCellCnt'};
     end
-
+    
     t_processed = [t_processed; t_conditions];
-
+    
+end
+if height(t_toofew)>10
+    warnprintf('%i conditions with too few cells -> assigned as dead cells', height(t_toofew))
+    t_ = group_counts(t_toofew);
+    disp(sortrows(t_(t_.counts>5,:),3))
+end
+if height(t_toomany)>10
+    warnprintf('%i conditions with too many cells -> remove dead cells', height(t_toofew))
+    t_ = group_counts(t_toomany);
+    disp(sortrows(t_(t_.counts>5,:),3))
 end

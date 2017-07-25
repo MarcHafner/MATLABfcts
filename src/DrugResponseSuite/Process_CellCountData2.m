@@ -231,7 +231,7 @@ if height(t_toofew)>10
     disp(sortrows(t_(t_.counts>5,:),3))
 end
 if height(t_toomany)>10
-    warnprintf('%i conditions with too many cells -> remove dead cells', height(t_toofew))
+    warnprintf('%i conditions with too many cells -> remove dead cells', height(t_toomany))
     t_ = group_counts(t_toomany);
     disp(sortrows(t_(t_.counts>5,:),3))
 end

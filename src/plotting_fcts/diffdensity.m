@@ -1,4 +1,4 @@
-function [hAxes, maxF, edges1, edges2] = dscatter(X,Y, varargin)
+function [hAxes, maxF, edges1, edges2] = diffdensity(X1, Y1, X2, Y2, varargin)
 % DSCATTER creates a scatter plot coloured by density.
 %
 %   DSCATTER(X,Y) creates a scatterplot of X and Y at the locations
@@ -23,7 +23,7 @@ function [hAxes, maxF, edges1, edges2] = dscatter(X,Y, varargin)
 %   for the 2D histogram used to estimate the density. The default is to
 %   use the number of unique values in X and Y up to a maximum of 200.
 %
-%   DSCATTER(...,'SMOOTHING',LAMBDA) allows you to set the smoothing factor
+%   DSCATTER(...,'lambda',LAMBDA) allows you to set the smoothing factor
 %   used by the density estimator. The default value is 20 which roughly
 %   means that the smoothing is over 20 bins around a given point.
 %
@@ -75,19 +75,21 @@ p = p.Results;
 
 
 if p.logx
-    X = log10(X);
+    X1 = log10(X1);
+    X2 = log10(X2);
 end
 if p.logy
-    Y = log10(Y);
+    Y1 = log10(Y1);
+    Y2 = log10(Y2);
 end
 
-minx = min(X,[],1);
-maxx = max(X,[],1);
-miny = min(Y,[],1);
-maxy = max(Y,[],1);
+minx = min([X1;X2],[],1);
+maxx = max([X1;X2],[],1);
+miny = min([Y1;Y2],[],1);
+maxy = max([Y1;Y2],[],1);
 
 if isempty(p.nbins)
-    nbins = [min(numel(unique(X)),200) ,min(numel(unique(Y)),200) ];
+    nbins = repmat(min([numel(unique(X1)),numel(unique(X2)),200]),1,2);
 else
     nbins = p.nbins;
 end
@@ -111,14 +113,23 @@ else
 end
 
 
-[n,~] = size(X);
+[n,~] = size(X1);
 bin = zeros(n,2);
 % Reverse the columns to put the first column of X along the horizontal
 % axis, the second along the vertical.
-[~,bin(:,2)] = histc(X,edges1);
-[~,bin(:,1)] = histc(Y,edges2);
-H = accumarray(bin,1,nbins([2 1])) ./ n;
-G = smooth1D(H,nbins(2)/p.lambda);
+[~,bin(:,2)] = histc(X1,edges1);
+[~,bin(:,1)] = histc(Y1,edges2);
+H1 = accumarray(bin,1,nbins([2 1])) ./ n;
+
+[n,~] = size(X2);
+bin = zeros(n,2);
+% Reverse the columns to put the first column of X along the horizontal
+% axis, the second along the vertical.
+[~,bin(:,2)] = histc(X2,edges1);
+[~,bin(:,1)] = histc(Y2,edges2);
+H2 = accumarray(bin,1,nbins([2 1])) ./ n;
+
+G = smooth1D(H1-H2,nbins(2)/p.lambda);
 F = smooth1D(G',nbins(1)/p.lambda)';
 % = filter2D(H,lambda);
 
@@ -126,23 +137,23 @@ if p.logc
     F = F.^p.logc;
 end
 if isnan(p.maxF)
-    maxF = max(F(:));
+    maxF = max(abs(F(:)));
 else
     maxF = p.maxF;
 end
-F = min(F/maxF,1);
+F = max(min(F/maxF,1),-1);
 
 if p.subsampling>0
-    idx = randperm(length(X));
+    idx = randperm(length(X1));
     idx = idx(1:min(p.subsampling,end));
 else
-    idx = 1:length(X);
+    idx = 1:length(X1);
 end
 
 switch lower(p.plottype)
     
     case 'surf'
-        h = surf(ctrs1,ctrs2,F,'edgealpha',0);
+        h = surf(ctrs1,ctrs2,F,'edgealpha',0);        
     case 'mesh'
         h = mesh(ctrs1,ctrs2,F);
     case 'contour'
@@ -150,21 +161,20 @@ switch lower(p.plottype)
     case 'image'
         nc = 256;
         colormap(repmat(linspace(1,0,nc)',1,3));
-        h =image(ctrs1,ctrs2,floor(nc.*F) + 1);
+        h = image(ctrs1,ctrs2,floor(nc.*F) + 1);
     case 'scatter'
         ind = sub2ind(size(F),bin(:,1),bin(:,2));
         col = F(ind);
         if p.filled
-            h = scatter(X(idx),Y(idx),p.msize,col(idx),p.marker,'filled');
+            h = scatter(X1(idx),Y1(idx),p.msize,col(idx),p.marker,'filled');
         else
-            h = scatter(X(idx),Y(idx),p.msize,col(idx),p.marker);
+            h = scatter(X1(idx),Y1(idx),p.msize,col(idx),p.marker);
         end
     otherwise
         error('dscatter:UnknownPlotType',...
             'Unknown plot type: %s.',p.plottype);
-        
 end
-
+caxis([-1 1])
 
 
 if nargout > 0

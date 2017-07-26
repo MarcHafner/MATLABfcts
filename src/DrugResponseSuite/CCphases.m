@@ -1,10 +1,10 @@
 function [DNAPks, EdUPks] = CCphases(DNA, EdU, plotting)
 currfig = gcf;
 
-xDNA = 2.5:.02:8;
-xEdU = -.1:.02:5.4;
+xDNA = 2.5:.02:7.5;
+xEdU = -.1:.02:4.9;
 nsmooth = 5;
-EdUshift = 1;
+EdUshift = 1.2;
 minEdU = 1.5;
 
 if ~exist('plotting','var'), plotting=false; end
@@ -45,7 +45,7 @@ Pk2D = imregionalmax(F);
 PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
 PksCandidates = sortrows(...
     PksCandidates( (PksCandidates(:,2)>(nsmooth+2)*diff(xEdU2([1 2]))) & ...
-    PksCandidates(:,3)>1e-5,:), 3); % filter out the small peaks and one with EdU=0
+    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:), 3); % filter out the small peaks and one with EdU=0
 
 if plotting
     % plotting the results
@@ -54,6 +54,7 @@ if plotting
     hold on
     scatter(PksCandidates(:,1), PksCandidates(:,2), 20+sqrt(PksCandidates(:,3))*100, 'ok')
     set(gca,'ydir','normal')
+    PksCandidates
 end
 
 PhasesCandidates = NaN(3,2);
@@ -82,8 +83,10 @@ if max(PksCandidates(:,2))-min(PksCandidates(:,2))>EdUshift && ...
 else
     % most likely no S peak -> take the two highest peak and assign as G1
     % and G2
-    PhasesCandidates([1 3],:) = PksCandidates(1:2,[1 2]);
-    
+    PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
+    if size(PksCandidates,1)>1
+        PhasesCandidates(3,:) = PksCandidates(2,[1 2]);
+    end
 end
 
 if plotting
@@ -112,6 +115,8 @@ f = ksdensity(DNA(EdU<minEdU+.2*EdUshift),xDNA);
 if plotting, plot(xDNA, f, '--'), end
 
 [pks, idx] = findpeaks(f);
+idx = idx(pks>max(pks/10)); % remove lesser peaks
+pks = pks(pks>max(pks/10));
 
 % find the DNA peak for G1
 DNAPks = idx(sortidx(pks,'descend'));
@@ -149,23 +154,30 @@ if plotting, plot(xEdU, f, '--'), end
 EdUPks = idx(sortidx(pks,'descend'));
 
 % take the peak with lowest EdU
-EdUPks = min(xEdU(EdUPks([1 2])));
+EdUPks = min(xEdU(EdUPks(1:min(length(EdUPks),2))));
 
 
 % get the high EdU (S)
-hE = (DNA>DNAPks-log10(2)/2) & (DNA<DNAPks+log10(2)*1.5) & EdU>2*nsmooth*diff(xEdU(1:2));
+hE = (DNA>DNAPks-log10(2)/2) & (DNA<DNAPks+log10(2)*1.5) & EdU>EdUPks+EdUshift*.8;
 f = ksdensity(EdU(hE),xEdU);
 if plotting, plot(xEdU, f, ':'), end
 
 [pks, idx] = findpeaks(smooth(f,nsmooth));
+idx = idx(pks>max(pks/10)); % remove lesser peaks
+pks = pks(pks>max(pks/10));
 hEdUPks = idx(sortidx(pks,'descend'));
-% should be at least 1 above the EdU peak in G1
-EdUPks = [EdUPks ...
-    xEdU(hEdUPks(find(xEdU(hEdUPks)>(EdUPks+EdUshift),1,'first'))) EdUPks];
+if any(xEdU(hEdUPks)>(EdUPks+EdUshift))
+    % should be at least 1 above the EdU peak in G1
+    EdUPks = [EdUPks ...
+        xEdU(hEdUPks(find(xEdU(hEdUPks)>(EdUPks+EdUshift),1,'first'))) EdUPks];
+else
+    % set by default
+    EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
+end
 
 % cut off is set half way between the peaks
 EdUcutoff = mean(EdUPks);
-ylims = [0 EdUPks(2)+(EdUPks(2)-EdUcutoff)];
+ylims = [0 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), xEdU(end-1))];
 
 if plotting
     % plot the location of the peaks
@@ -184,6 +196,8 @@ if plotting
 end
 
 [pks, idx] = findpeaks(smooth(f,3*nsmooth));
+idx = idx(pks>max(pks/10)); % remove lesser peaks
+pks = pks(pks>max(pks/10));
 DNAPks = [DNAPks xDNA(idx(argmax(pks)))];
 
 
@@ -197,6 +211,8 @@ if plotting
 end
 
 [pks, idx] = findpeaks(smooth(f,nsmooth));
+idx = idx(pks>max(pks/10)); % remove lesser peaks
+pks = pks(pks>max(pks/10));
 hDNAPks = idx(sortidx(pks,'descend'));
 % should be around log10(2) above the DNA peak in G1
 hDNAPks = xDNA(hDNAPks(xDNA(hDNAPks)>(DNAPks(1)+.5*log10(2))));
@@ -221,10 +237,13 @@ DNAPks = [DNAPks hDNAPks];
 f = ksdensity(DNA,xDNA);
 [~, idx] = findpeaks(-smooth(f,5));
 DNAcutoff = mean(xDNA(idx(xDNA(idx)>DNAPks(1) & xDNA(idx)<DNAPks(3))));
+if isnan(DNAcutoff)
+    DNAcutoff = DNAPks(2);
+end
 
 d1 = DNAcutoff-DNAPks(1);
 d2 = DNAPks(3)-DNAcutoff;
-xlims = [DNAPks(1)-3*d1 DNAPks(3)+3*d2];
+xlims = [max(DNAPks(1)-3*d1, xDNA(2)) min(DNAPks(3)+3*d2, xDNA(end-1))];
 if plotting
     plot(DNAPks, 0, 'xk');
     plot(DNAcutoff, 0, 'xk');
@@ -259,7 +278,9 @@ if plotting
     
     xlim(xlims)
     ylim(ylims)
+end
+%%
+if plotting
     pause
     figure(currfig)
 end
-%%

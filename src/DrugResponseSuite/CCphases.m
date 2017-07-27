@@ -1,25 +1,59 @@
 function [DNAPks, EdUPks] = CCphases(DNA, EdU, plotting)
 currfig = gcf;
 
-xDNA = 2.5:.02:7.5;
-xEdU = -.1:.02:4.9;
+xDNA = 2.5:.02:8;
+xEdU = -.2:.02:5.3;
 nsmooth = 5;
-EdUshift = 1.2;
-minEdU = 1.5;
 
 if ~exist('plotting','var'), plotting=false; end
 
-% log10 domain and capping
-DNA = log10(min(max(DNA, 10^xDNA(2)),10^xDNA(end-1)));
-EdU = log10(min(max(EdU, 10^xEdU(2)),10^xEdU(end-1)));
+% determine the spread of the EdU data to calibrate cutoffs
+e = -200:1e3;
+f = ksdensity(EdU+2*rand(size(EdU)), e);
+[~,p,w]=findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
+p = e(ceil(p));
 
-%%
+offsetEdU = max(p-1.5*w,1); 
+
+% log10 domain and capping
+logDNA = log10(min(max(DNA, 10^xDNA(2)),10^xDNA(end-1)));
+logEdU = log10(min(max(EdU-offsetEdU, 10^xEdU(2)),10^xEdU(end-1)));
+
+% expected minumum EdU value for S (in log10)
+minEdU = log10(p+2*w-offsetEdU);
+% expected difference between G1/G2 and S (in log10)
+EdUshift = max(log10(p+2*w-offsetEdU)-log10(p-offsetEdU),1);
+
+% % transform the EdU with a sigmoidal
+% minEdU = max(quantile(EdU,.02),0)
+% logEdU = max(EdU-minEdU,0)./(max(EdU-minEdU,0)+w*2);
+% EdUshift = .5; % expected difference between G1/G2 and S (in log10)
+% minEdU = .6; % expected minumum EdU value for S (in log10)
+
+%
 if plotting
-    get_newfigure(45654,[50 600 600 650])
+    get_newfigure(45654,[5 600 500 750])
+
+    % plot original data
+    subplot(322)
+    idx = randperm(length(EdU),min(length(EdU),1000));
+    plot(EdU(idx), logEdU(idx),'.c')
+    hold on
+    plot(e, max(xEdU)*f/max(f), 'k-')
+    plot([-200 300 NaN -100 500], ...
+        [minEdU*[1 1] NaN EdUshift*[1 1]+log10(max(p-offsetEdU,1)) ], '-r')
+    plot(offsetEdU*[1 1], [0 5], '-r')
+    ylim(xEdU([1 end]))
+    xlim([min(EdU) max(p+5*w, 500)])
+    
+    % plot original data
+    subplot(321)
+    f = ksdensity(DNA, 0:100:1e6);
+    plot(0:100:1e6, f, '-k')
     
     % plots with both channels
-    subplot(223)
-    dscatter(DNA, EdU, 'MSIZE', 20, 'marker', 'o')
+    subplot(325)
+    dscatter(logDNA, logEdU, 'MSIZE', 20, 'marker', 'o')
     hold on
 end
 
@@ -29,12 +63,12 @@ end
 xDNA2 = xDNA(1:2:end);
 xEdU2 = xEdU(1:2:end);
 nbins = [length(xDNA2) length(xEdU2)]-1;
-bin = NaN(length(DNA),2);
-[~,bin(:,2)] = histc(DNA,xDNA2);
-[~,bin(:,1)] = histc(EdU,xEdU2);
+bin = NaN(length(logDNA),2);
+[~,bin(:,2)] = histc(logDNA,xDNA2);
+[~,bin(:,1)] = histc(logEdU,xEdU2);
 % counting and smoothing
 
-H = accumarray(bin,1,nbins([2 1]))/length(DNA);
+H = accumarray(bin,1,nbins([2 1]))/length(logDNA);
 G = smooth1D(H,nsmooth);
 F = smooth1D(G',nsmooth)';
 
@@ -49,7 +83,7 @@ PksCandidates = sortrows(...
 
 if plotting
     % plotting the results
-    subplot(224)
+    subplot(326)
     imagesc(xDNA2, xEdU2, F)
     hold on
     scatter(PksCandidates(:,1), PksCandidates(:,2), 20+sqrt(PksCandidates(:,3))*100, 'ok')
@@ -103,15 +137,15 @@ end
 % now working with each channel sequentially
 
 % work with the DNA content
-f = ksdensity(DNA,xDNA);
+f = ksdensity(logDNA,xDNA);
 
 if plotting
-    subplot(221)
+    subplot(323)
     plot(xDNA, f)
     hold on
 end
 
-f = ksdensity(DNA(EdU<minEdU+.2*EdUshift),xDNA);
+f = ksdensity(logDNA(logEdU<minEdU+.2*EdUshift),xDNA);
 if plotting, plot(xDNA, f, '--'), end
 
 [pks, idx] = findpeaks(f);
@@ -139,15 +173,15 @@ if plotting, plot(DNAPks, .1, 'xk'); end
 
 
 % work with EdU
-f = ksdensity(EdU,xEdU);
+f = ksdensity(logEdU,xEdU);
 if plotting
-    subplot(222)
+    subplot(324)
     plot(xEdU, f)
     hold on
 end
 % find the low EdU (G1 and early S)
-lE = ( (DNA>DNAPks-1) & (DNA<DNAPks+.1) ) & EdU>2*nsmooth*diff(xEdU(1:2));
-f = ksdensity(EdU(lE),xEdU);
+lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & logEdU>2*nsmooth*diff(xEdU(1:2));
+f = ksdensity(logEdU(lE),xEdU);
 if plotting, plot(xEdU, f, '--'), end
 
 [pks, idx] = findpeaks(smooth(f,nsmooth));
@@ -158,8 +192,8 @@ EdUPks = min(xEdU(EdUPks(1:min(length(EdUPks),2))));
 
 
 % get the high EdU (S)
-hE = (DNA>DNAPks-log10(2)/2) & (DNA<DNAPks+log10(2)*1.5) & EdU>EdUPks+EdUshift*.8;
-f = ksdensity(EdU(hE),xEdU);
+hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUPks+EdUshift*.8;
+f = ksdensity(logEdU(hE),xEdU);
 if plotting, plot(xEdU, f, ':'), end
 
 [pks, idx] = findpeaks(smooth(f,nsmooth));
@@ -187,11 +221,11 @@ if plotting
 end
 
 % get back to the DNA to find the S location
-hE = (DNA>DNAPks-log10(2)/2) & (DNA<DNAPks+log10(2)*1.5) & EdU>EdUcutoff;
-f = ksdensity(DNA(hE),xDNA);
+hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUcutoff;
+f = ksdensity(logDNA(hE),xDNA);
 
 if plotting
-    subplot(221)
+    subplot(323)
     plot(xDNA, f, '-.')
 end
 
@@ -202,11 +236,10 @@ DNAPks = [DNAPks xDNA(idx(argmax(pks)))];
 
 
 % get back to the DNA to find the G2
-hD = DNA>DNAPks(1)+.3*log10(2) & EdU<EdUcutoff;
-f = ksdensity(DNA(hD),xDNA);
+hD = logDNA>DNAPks(1)+.3*log10(2) & logEdU<EdUcutoff;
+f = ksdensity(logDNA(hD),xDNA);
 
 if plotting
-    subplot(221)
     plot(xDNA, f, ':')
 end
 
@@ -234,7 +267,7 @@ end
 DNAPks = [DNAPks hDNAPks];
 
 % find the split between G1 and G2
-f = ksdensity(DNA,xDNA);
+f = ksdensity(logDNA,xDNA);
 [~, idx] = findpeaks(-smooth(f,5));
 DNAcutoff = mean(xDNA(idx(xDNA(idx)>DNAPks(1) & xDNA(idx)<DNAPks(3))));
 if isnan(DNAcutoff)
@@ -257,7 +290,7 @@ G2range = [DNAcutoff DNAPks(3)+d2];
 
 if plotting
     % plots with both channels
-    subplot(223)
+    subplot(325)
     plot(G1range([1 1 2 2]), [0 EdUcutoff EdUcutoff 0], '-r')
     plot(G2range([1 1 2 2]), [0 EdUcutoff EdUcutoff 0], '-r')
     plot([G1range([1 1]) G2range([2 2])], ...
@@ -273,7 +306,7 @@ if plotting
     ylim(ylims)
     
     
-    subplot(224)
+    subplot(326)
     plot(DNAPks, EdUPks, 'xk')
     
     xlim(xlims)

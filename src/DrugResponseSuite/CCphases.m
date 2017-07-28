@@ -9,9 +9,15 @@ if ~exist('plotting','var'), plotting=false; end
 
 % determine the spread of the EdU data to calibrate cutoffs
 e = -200:1e3;
-f = ksdensity(EdU+2*rand(size(EdU)), e);
+f = ksdensity(EdU, e);
 [~,p,w]=findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
 p = e(ceil(p));
+
+f2 = ksdensity(EdU(EdU>p+30), e);
+[~,m]=findpeaks(-f2,'npeaks',1,'widthreference','halfprom','sortstr','descend');
+m = e(ceil(m));
+m = max([m; p+3*w]);
+
 
 offsetEdU = max(p-1.5*w,1);
 
@@ -19,6 +25,8 @@ offsetEdU = max(p-1.5*w,1);
 logDNA = log10(min(max(DNA, 10^xDNA(2)),10^xDNA(end-1)));
 logEdU = log10(min(max(EdU-offsetEdU, 10^xEdU(2)),10^xEdU(end-1)));
 
+% expected maximum EdU value for G1 (in log10)
+maxEdU = log10(m-offsetEdU);
 % expected minumum EdU value for S (in log10)
 minEdU = log10(p+2*w-offsetEdU);
 % expected difference between G1/G2 and S (in log10)
@@ -40,9 +48,11 @@ if plotting
     plot(EdU(idx), logEdU(idx),'.c')
     hold on
     plot(e, max(xEdU)*f/max(f), 'k-')
-    plot([-200 300 NaN -100 500], ...
+    plot(e, max(xEdU)*f2/max(f2), 'k-')
+    plot([-200 300 NaN -100 500 ], ...
         [minEdU*[1 1] NaN EdUshift*[1 1]+log10(max(p-offsetEdU,1)) ], '-r')
     plot(offsetEdU*[1 1], [0 5], '-r')
+    plot([-100 m m], [maxEdU*[1 1] 0], '-r')
     ylim(xEdU([1 end]))
     xlim([min(EdU) max(p+5*w, 500)])
     
@@ -90,7 +100,6 @@ if plotting
     hold on
     scatter(PksCandidates(:,1), PksCandidates(:,2), 20+sqrt(PksCandidates(:,3))*100, 'ok')
     set(gca,'ydir','normal')
-    PksCandidates
 end
 
 PhasesCandidates = NaN(3,2);
@@ -103,11 +112,12 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
     PhasesCandidates(2,:) = PksCandidates(argmax(PksCandidates(:,2)),[1 2]);
     
     % find the G1 peak now
-    temp = PksCandidates(PksCandidates(:,1)<PhasesCandidates(2,1) & ...
+    temp = PksCandidates(PksCandidates(:,1)<PhasesCandidates(2,1)+log10(2)/5 & ...
+        PksCandidates(:,1)>PhasesCandidates(2,1)-log10(2) & ...
         PksCandidates(:,2)<PhasesCandidates(2,2)-EdUshift, [1 2]);
     if ~isempty(temp) % there is a likely G1 peak
         % assign the G1 peak as the one closest to the S peak on the DNA axis
-        PhasesCandidates(1,:) = temp(argmax(temp(:,1)),:);
+        PhasesCandidates(1,:) = temp(argmin(temp(:,1)),:);
     end
     % assign the G2 peak as the one closest to the S peak on the DNA axis
     temp = PksCandidates(PksCandidates(:,1)>nanmean(PhasesCandidates(1:2,1)) & ...
@@ -117,11 +127,13 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
     end
     
 else
-    % most likely no S peak -> take the two highest peak and assign as G1
-    % and G2
-    PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
-    if size(PksCandidates,1)>1 && diff(PksCandidates(:,1))>.5*log10(2)
-        PhasesCandidates(3,:) = PksCandidates(2,[1 2]);
+    % most likely no S peak
+    % -> take the two highest peak and assign as G1 and G2
+    if ~isempty(PksCandidates)
+        PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
+        if size(PksCandidates,1)>1 && diff(PksCandidates(:,1))>.5*log10(2)
+            PhasesCandidates(3,:) = PksCandidates(2,[1 2]);
+        end
     end
 end
 
@@ -148,7 +160,7 @@ if plotting
 end
 
 % take only the cells with low EdU
-f = ksdensity(logDNA(logEdU<minEdU+.2*EdUshift),xDNA);
+f = ksdensity(logDNA(logEdU<minEdU+.2*EdUshift & logEdU<maxEdU),xDNA);
 if plotting, plot(xDNA, f, '--'), end
 
 [pks, idx] = findpeaks(f);
@@ -183,13 +195,14 @@ if plotting
     hold on
 end
 % find the low EdU (G1 and early S)
-lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & logEdU>2*nsmooth*diff(xEdU(1:2));
+lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & ...
+    logEdU>2*nsmooth*diff(xEdU(1:2)) & logEdU<maxEdU;
 f = ksdensity(logEdU(lE),xEdU);
 N = histcounts(logEdU(lE),xEdU);
 f([true; smooth(N,3)<=1/3]) = 0; % remove single cells
 if plotting, plot(xEdU, f, '--'), end
 
-[pks, idx] = findpeaks(smooth(f,nsmooth),'sortstr','descend');
+[~, idx] = findpeaks(smooth(f,nsmooth),'sortstr','descend');
 % take the highest peak
 EdUPks = xEdU(idx(1));
 
@@ -265,10 +278,9 @@ if any(hD)
     
     [pks, idx] = findpeaks(smooth(f,nsmooth), 'sortstr', 'descend');
     idx = idx(pks>max(pks/10)); % remove lesser peaks
-    pks = pks(pks>max(pks/10));
     hDNAPks = xDNA(idx);
     % should be around log10(2) above the DNA peak in G1
-    hDNAPks = hDNAPks(hDNAPks>(DNAPks(1)+.5*log10(2)))
+    hDNAPks = hDNAPks(hDNAPks>(DNAPks(1)+.5*log10(2)));
     
     if length(hDNAPks)>1
         % more than one candidate

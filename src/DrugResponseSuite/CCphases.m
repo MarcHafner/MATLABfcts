@@ -1,4 +1,4 @@
-function [DNAPks, EdUPks] = CCphases(DNA, EdU, plotting)
+function [DNAPks, EdUPks, cellFrac, Gates, logDNA, logEdU] = CCphases(DNA, EdU, plotting)
 currfig = gcf;
 
 xDNA = 2.5:.02:8;
@@ -326,6 +326,14 @@ end
 % define areas
 G1range = [DNAPks(1)-d1 DNAcutoff];
 G2range = [DNAcutoff DNAPks(3)+d2];
+Gates = struct('G1', [G1range' [xEdU(1) EdUcutoff]'], ...
+    'S', [ [G1range(1) G2range(2)]', [EdUcutoff EdUPks(2)+EdUcutoff*.5]'], ...
+    'G2', [G2range' [xEdU(1) EdUcutoff]'] );
+
+cellFrac = [mean(logDNA>=G1range(1) & logDNA<G1range(2) & logEdU<EdUcutoff) ...
+    mean(logDNA>=G1range(1) & logDNA<G2range(2) & logEdU>=EdUcutoff) ...
+    mean(logDNA>=G2range(1) & logDNA<G2range(2) & logEdU<EdUcutoff) ...
+    mean(logDNA<G1range(1) | logDNA>G2range(2) )];
 
 if plotting
     % plots with both channels

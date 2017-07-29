@@ -22,8 +22,8 @@ m = max([m; p+3*w]);
 offsetEdU = max(p-1.5*w,1);
 
 % log10 domain and capping
-logDNA = log10(min(max(DNA, 10^xDNA(2)),10^xDNA(end-1)));
-logEdU = log10(min(max(EdU-offsetEdU, 10^xEdU(2)),10^xEdU(end-1)));
+logDNA = log10(min(max(DNA, 10^xDNA(3)),10^xDNA(end-2)));
+logEdU = log10(min(max(EdU-offsetEdU, 10^xEdU(3)),10^xEdU(end-2)));
 
 % expected maximum EdU value for G1 (in log10)
 maxEdU = log10(m-offsetEdU);
@@ -131,8 +131,9 @@ else
     % -> take the two highest peak and assign as G1 and G2
     if ~isempty(PksCandidates)
         PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
-        if size(PksCandidates,1)>1 && diff(PksCandidates(:,1))>.5*log10(2)
-            PhasesCandidates(3,:) = PksCandidates(2,[1 2]);
+        if size(PksCandidates,1)>1 && any((PksCandidates(:,1)-PksCandidates(1,1))>.5*log10(2))
+            PhasesCandidates(3,:) = PksCandidates(1+find( ...
+                (PksCandidates(2:end,1)-PksCandidates(1,1))>.5*log10(2), 1, 'first'),[1 2]);
         end
     end
 end

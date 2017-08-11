@@ -192,13 +192,11 @@ end
 f = ksdensity(logDNA(logEdU<minEdU+.2*EdUshift & logEdU<maxEdU),p.xDNA);
 if p.plotting, plot(p.xDNA, f, '--'), end
 
-[pks, idx] = findpeaks(f);
+[pks, idx] = findpeaks(f, 'sortstr', 'descend');
 idx = idx(pks>max(pks/10)); % remove lesser peaks
-pks = pks(pks>max(pks/10));
+DNAPks = p.xDNA(idx(1:min(3,length(idx)))); % take the 3 highest peaks with low EdU
 
 % find the DNA peak for G1
-DNAPks = idx(sortidx(pks,'descend'));
-DNAPks = p.xDNA(DNAPks(1:min(3,length(DNAPks)))); % take the 3 highest peaks with low EdU
 if length(DNAPks)>1
     % more than one candidate
     if ~isnan(PhasesCandidates(1,1))

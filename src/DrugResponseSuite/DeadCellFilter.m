@@ -1,23 +1,31 @@
 function [LiveCells, DeadCells, Gates, AliveIdx] = DeadCellFilter(LDRtxt, varargin)
-currfig = gcf;
 
 p = inputParser;
+
 addOptional(p, 'DNA', [], @(x) isvector(x) & length(x)==length(LDRtxt))
 addParameter(p, 'plotting', false, @islogical)
+addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xDNA', 2.5:.02:8, @isvector)
 addParameter(p, 'xLDR', -.01:.0002:(max(LDRtxt)+.01), @isvector)
 addParameter(p, 'LDRcutoff', [], @isscalar)
 addParameter(p, 'nsmooth', 5, @isnumeric)
 addParameter(p, 'DNApks', [NaN NaN], @(x) isvector(x) & length(x)==2)
 addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
+addParameter(p, 'savefigure', '', @ischar)
 
 parse(p,varargin{:});
 p = p.Results;
+
+if p.interactive, p.plotting = true; end
+if ~isempty(p.savefigure), p.plotting = true; end
+
 DNA = p.DNA;
 p = rmfield(p,'DNA');
 useDNA = ~isempty(DNA);
+
 %%
 
+% start with the LDR channel
 f = ksdensity(LDRtxt, p.xLDR, 'width', 2.5*diff(p.xLDR(1:2)));
 
 if ~isnan(p.Gates(1,2))
@@ -33,31 +41,40 @@ else
     Gates = [-Inf LDRcutoff];
 end
 
-plot_pos = [
-    .05 .6 .35 .37;
-    .6 .6 .35 .37;
-    .05 .1 .35 .37];
 
-%
 if p.plotting
-    get_newfigure(45674,[505 600 500 650])
+    % plotting results
+    currfig = gcf;
+    
+    plot_pos = [
+    .07 .6 .4 .37;
+    .57 .6 .4 .37;
+    .15 .05 .4 .4
+    .6 .15 .3 .3];
+
+    get_newfigure(45674,[505 600 550 500])
     ylims = quantile(LDRtxt, [1e-3 .999]);
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
     plot(p.xLDR, log10(f+max(f)/100)-log10(max(f)/100))
+    
+    plot([Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)], ...
+        [0 0 .5 .5 0]*log10(max(f)), '-', 'color', [.6 .9 .1]);
     pltgt1 = plot([Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)], ...
         [0 0 .5 .5 0]*log10(max(f)), 'r-');
     
     xlim(ylims)
     ylim([0 log10(max(f))-log10(max(f)/100)+.1])
+    set(gca,'xtick',[],'ytick',[])
     
+    pieax = get_newaxes(plot_pos(4,:));   
+    set(gca,'xtick',[],'ytick',[],'visible','off') 
 end
 
-AliveIdx = LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2);
 
 if useDNA
-    % work with the DNA content
+    % work with the DNA content if provided
     
     % log10 domain and capping
     logDNA = log10(min(max(DNA, 10^p.xDNA(3)),10^p.xDNA(end-2)));
@@ -66,16 +83,15 @@ if useDNA
     if p.plotting
         % plot original data
         get_newaxes(plot_pos(2,:),1)
-        hold on
         xlims = quantile(logDNA, [1e-3 .999])+[-.1 .2];
         plot(p.xDNA, f2, '-k')
         xlim(xlims)
-        
+        set(gca,'xtick',[],'ytick',[])
     end
     
     
     % take only the cells with low LDR
-    f2s = ksdensity(logDNA(AliveIdx),p.xDNA);
+    f2s = ksdensity(logDNA(LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2)),p.xDNA);
     if p.plotting, plot(p.xDNA, f2s, '--r'), end
     
     [pks, idx] = findpeaks(f2s, 'sortstr', 'descend');
@@ -99,10 +115,10 @@ if useDNA
     
     
     
-    % get the G2
-    hD = logDNA>DNAPks(1)+.4*log10(2) & AliveIdx;
+    % get the cells in G2 phase
+    hD = logDNA>DNAPks(1)+.4*log10(2) & LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2);
     if any(hD)
-        % found some G2 cells
+        % found some cells in G2 phase
         f3 = ksdensity(logDNA(hD),p.xDNA);
         
         if p.plotting
@@ -129,7 +145,8 @@ if useDNA
         DNAPks = [DNAPks hDNAPks];
         
     else
-        % no G2 cells
+        % no cells found in G2 phase
+        % default value (2-fold)
         DNAPks = [DNAPks DNAPks(1)+log10(2)];
         
     end
@@ -138,19 +155,18 @@ if useDNA
     if any(isnan(p.Gates(2,:)))
         % define areas
         Gates(2,:) = DNAPks + [-1.2 1.2]*diff(DNAPks);
-        AliveIdx = AliveIdx & (logDNA>=Gates(2,1) & logDNA<=Gates(2,2));
     else
         Gates(2,:) = p.Gates(2,:);
-        AliveIdx = AliveIdx & (logDNA>=Gates(2,1) & logDNA<=Gates(2,2));
     end
     
     
     if p.plotting
+        plot(Gates(2,[1 1 2 2]), [0 max(f2)*[1.02 1.02] 0], '--', 'color', [.6 .9 .1]);
         pltgt2 = plot(Gates(2,[1 1 2 2]), [0 max(f2)*[1.02 1.02] 0], '-r');
         phases = {'G1'  'G2'};
         for i=1:2
             text(DNAPks(i), max(f2)*1.1, phases{i}, ...
-                'fontsize', 14, 'fontweight', 'bold', 'color', 'r', ...
+                'fontsize', 14, 'fontweight', 'bold', 'color', [.6 .9 .1], ...
                 'horizontalalign','center')
         end
         ylim([0 max(f2)*1.2])
@@ -158,11 +174,11 @@ if useDNA
         
         get_newaxes(plot_pos(3,:),1)
         dscatter(logDNA, LDRtxt, 'MSIZE', 15, 'marker', 'o')
-        hold on
-        ylim(ylims)
-        xlim(xlims)
         
-        pltgt3 = plot(Gates(2,[1 1 2 2 1]), max(Gates(1,[1 2 2 1 1]),0), '-r');
+        plot(Gates(2,[1 1 2 2 1]), max(Gates(1,[1 2 2 1 1]),0), '--', ...
+            'color', [.6 .9 .1], 'linewidth', 2);
+        pltgt3 = plot(Gates(2,[1 1 2 2 1]), max(Gates(1,[1 2 2 1 1]),0), ...
+            '-r', 'linewidth', 2);
         plot(DNAPks, [0 0], 'xk')
         plot(DNAPks, [0 0], 'ok', 'markersize', 14)
         xlim(xlims)
@@ -171,55 +187,55 @@ if useDNA
     
     
 end
+
 % finalize the results
-
-LiveCells = sum(AliveIdx);
-DeadCells = sum(~AliveIdx);
+[LiveCells, DeadCells, AliveIdx] = EvalAliveIdx();
 
 
-if p.plotting
+
+if p.interactive
     figpos = get(gcf,'position');
     
     minLDR = uicontrol('style', 'slider', 'callback', {@setGates,1});
     minLDR.Units = 'normalized';
-    minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.03 plot_pos(1,3)/2+30/figpos(3) .02];
+    minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)/2+30/figpos(3) .03];
     minLDR.Value = max(0,(Gates(1,1)-ylims(1))/diff(ylims));
-    minLDR.Visible = 'off';
     
     maxLDR = uicontrol('style', 'slider', 'callback', {@setGates,2});
     maxLDR.Units = 'normalized';
-    maxLDR.Position = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.06 plot_pos(1,3)+30/figpos(3) .02];
+    maxLDR.Position = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.08 plot_pos(1,3)+30/figpos(3) .03];
     maxLDR.Value = (Gates(1,2)-ylims(1))/diff(ylims);
-    maxLDR.Visible = 'off';
     
     if useDNA
         minDNA = uicontrol('style', 'slider', 'callback', {@setGates,3});
         minDNA.Units = 'normalized';
-        minDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.03 plot_pos(2,3)+30/figpos(3) .02];
+        minDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.04 plot_pos(2,3)+30/figpos(3) .03];
         minDNA.Value = (Gates(2,1)-xlims(1))/diff(xlims);
-        minDNA.Visible = 'off';
         
         maxDNA = uicontrol('style', 'slider', 'callback', {@setGates,4});
         maxDNA.Units = 'normalized';
-        maxDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.06 plot_pos(2,3)+30/figpos(3) .02];
+        maxDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.08 plot_pos(2,3)+30/figpos(3) .03];
         maxDNA.Value = (Gates(2,2)-xlims(1))/diff(xlims);
-        maxDNA.Visible = 'off';
     end
-    manual = uicontrol('style', 'pushbutton');
-    manual.Units = 'normalized';
-    manual.Position = [.6 .26 .35 .1];
-    manual.String = 'Define gate manually';
-    manual.Callback = @manualsetup;
     
     approve = uicontrol('style', 'pushbutton');
     approve.Units = 'normalized';
-    approve.Position = [.6 .13 .35 .1];
+    approve.Position = [.65 .03 .3 .1];
     approve.String = 'Approve';
     approve.Callback = @approveGate;
     
     waitfor(approve, 'backgroundcolor', 'g')
+    
 end
 
+if p.plotting
+    if ~isempty(p.savefigure)
+        set(gcf,'Renderer','painters')
+        saveas(gcf,p.savefigure)
+    end
+    
+    figure(currfig)
+end
 %%
     function setGates(src, event, x)
         if x<3
@@ -232,24 +248,35 @@ end
             set(pltgt2, 'XData', Gates(2,[1 1 2 2]))
             set(pltgt3, 'XData', Gates(2,[1 1 2 2 1]), 'YData', max(Gates(1,[1 2 2 1 1]),0));
         end
+        
+        [LiveCells, DeadCells, AliveIdx] = EvalAliveIdx();
     end
 
-    function manualsetup(src, event)
-        minLDR.Visible = 'on';
-        maxLDR.Visible = 'on';
-        minDNA.Visible = 'on';
-        maxDNA.Visible = 'on';
-        set(approve, 'backgroundcolor', 'r')
+    function [alive, dead, idx] = EvalAliveIdx()
+        idx = LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2);
+        if useDNA
+            idx = idx & (logDNA>=Gates(2,1) & logDNA<=Gates(2,2));
+        end
+        alive = sum(idx);
+        dead = sum(~idx);
+        
+        if p.plotting
+            set(gcf,'currentaxes', pieax)
+            cla
+            ptxt = pie([alive dead] ,{'Live cells' sprintf('Dead cells (%.0f%%)', ...
+                100*dead/(alive+dead))});
+            set(ptxt(4),'fontsize',12, 'fontweight','bold')
+        end
     end
 
     function approveGate(src, event)
         minLDR.Visible = 'off';
         maxLDR.Visible = 'off';
-        minDNA.Visible = 'off';
-        maxDNA.Visible = 'off';
-        
+        if useDNA
+            minDNA.Visible = 'off';
+            maxDNA.Visible = 'off';
+        end
         set(src, 'backgroundcolor', 'g')
-        [LiveCells, DeadCells, Gates, AliveIdx] = DeadCellFilter(LDRtxt, varargin{:}, 'Gates', Gates, 'plotting', false);
     end
 
 

@@ -1,18 +1,23 @@
-function [CCpeaks, CCfrac, Gates, logDNA, logEdU] = CCphases(DNA, EdU, varargin)
-currfig = gcf;
+function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU] = CCphases(DNA, EdU, varargin)
 
 
 p = inputParser;
 
 addParameter(p, 'plotting', false, @islogical)
+addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xDNA', 2.5:.02:8, @isvector)
 addParameter(p, 'xEdU', -.2:.02:5.3, @isvector)
 addParameter(p, 'nsmooth', 5, @isnumeric)
-addParameter(p, 'CCseeds', [], @(x) isempty(x) || (ismatrix(x) && all(size(x)==[3 2])))
+addParameter(p, 'CCseeds', [], @(x) ismatrix(x) && all(size(x)==[3 2]))
+addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & all(size(x)==[3 2]) & all(~isnan(x(:))))
+addParameter(p, 'EdUGates', [], @(x) isvector(x) & length(x)==2 & all(~isnan(x(:))))
+addParameter(p, 'savefigure', '', @ischar)
 
 
 parse(p,varargin{:});
 p = p.Results;
+if p.interactive, p.plotting = true; end
+if ~isempty(p.savefigure), p.plotting = true; end
 
 
 % determine the spread of the EdU data to calibrate cutoffs
@@ -25,7 +30,6 @@ f2 = ksdensity(EdU(EdU>pk+30), e);
 [~,m]=findpeaks(-f2,'npeaks',1,'widthreference','halfprom','sortstr','descend');
 m = e(ceil(m));
 m = max([m; pk+3*wdth]);
-
 
 offsetEdU = max(pk-1.5*wdth,1);
 
@@ -40,18 +44,30 @@ minEdU = log10(pk+2*wdth-offsetEdU);
 % expected difference between G1/G2 and S (in log10)
 EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
 
-% % transform the EdU with a sigmoidal
-% minEdU = max(quantile(EdU,.02),0)
-% logEdU = max(EdU-minEdU,0)./(max(EdU-minEdU,0)+w*2);
-% EdUshift = .5; % expected difference between G1/G2 and S (in log10)
-% minEdU = .6; % expected minumum EdU value for S (in log10)
 
 %
 if p.plotting
-    get_newfigure(45654,[5 600 500 750])
+    currfig = gcf;
+    
+    get_newfigure(45654,[5 600 550 650])
+    % define positions
+    plot_pos = [
+        .04 .8  .2 .18
+        .04 .58 .2 .16
+        .29  .8  .3 .18
+        .29  .58 .3 .16
+        .63 .65 .35 .3
+        .12  .1  .48  .4
+        .7 .3  .25  .2
+        .7  .15  .25 .08];
+    ax = [];
+    
+    ax(7) = get_newaxes(plot_pos(7,:),1);
+    axis square
+    set(gca,'xtick',[],'ytick',[],'visible','off')
     
     % plot original data
-    subplot(322)
+    ax(2) = get_newaxes(plot_pos(2,:),1);
     idx = randperm(length(EdU),min(length(EdU),1000));
     plot(EdU(idx), logEdU(idx),'.c')
     hold on
@@ -62,20 +78,23 @@ if p.plotting
     plot(offsetEdU*[1 1], [0 5], '-r')
     plot([-100 m m], [maxEdU*[1 1] 0], '-r')
     ylim(p.xEdU([1 end]))
-    xlim([min(EdU) max(pk+5*wdth, 500)])
+    xlim([-200 max(pk+5*wdth, 500)])
+    
     
     % plot original data
-    subplot(321)
+    ax(1) = get_newaxes(plot_pos(1,:),1);
     f = ksdensity(DNA, 0:100:1e6);
     plot(0:100:1e6, f, '-k')
     
     % plots with both channels
-    subplot(325)
+    ax(6) = get_newaxes(plot_pos(6,:),1);
     dscatter(logDNA, logEdU, 'MSIZE', 20, 'marker', 'o')
     hold on
 end
 
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % first pass at the finding peaks by combining DNA and EdU channels
+
 
 % coarser binning
 xDNA2 = p.xDNA(1:2:end);
@@ -84,8 +103,8 @@ nbins = [length(xDNA2) length(xEdU2)]-1;
 bin = NaN(length(logDNA),2);
 [~,bin(:,2)] = histc(logDNA,xDNA2);
 [~,bin(:,1)] = histc(logEdU,xEdU2);
-% counting and smoothing
 
+% counting and smoothing
 H = accumarray(bin,1,nbins([2 1]));
 H(H==1) = 0;
 H = H/length(logDNA);
@@ -96,6 +115,7 @@ F = smooth1D(G',p.nsmooth)';
 Pk2D = imregionalmax(F);
 [x,y] = find(Pk2D);
 
+% store candidate peaks
 PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
 PksCandidates = sortrows(...
     PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
@@ -103,15 +123,15 @@ PksCandidates = sortrows(...
 
 if p.plotting
     % plotting the results
-    subplot(326)
+    ax(5) = get_newaxes(plot_pos(5,:),1);
     imagesc(xDNA2, xEdU2, F)
-    hold on
     scatter(PksCandidates(:,1), PksCandidates(:,2), 20+sqrt(PksCandidates(:,3))*100, 'ok')
     set(gca,'ydir','normal')
 end
 
 PhasesCandidates = NaN(3,2);
 
+% assign the candidate peaks to G1, S, or G2
 if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
         PksCandidates(:,2)>(minEdU+.2*EdUshift))
     % there is enough differences on EdU to expect a S phase
@@ -156,36 +176,24 @@ if p.plotting
     end
 end
 
+EvaluatedPhasesCandidates = PhasesCandidates;
+
 if ~isempty(p.CCseeds)
-    PhasesCandidates = p.CCseeds;
-    
-    if p.plotting
-        phases = {'G1' 'S' 'G2'};
-        subplot(325)
-        for i=1:3
-            text(PhasesCandidates(i,1), PhasesCandidates(i,2), phases{i}, ...
-                'fontsize', 14, 'fontweight', 'bold', 'color', [0 .8 .8], ...
-                'horizontalalign','center')
-        end
-    
-        subplot(326)
-        for i=1:3
-            text(PhasesCandidates(i,1), PhasesCandidates(i,2), phases{i}, ...
-                'fontsize', 14, 'fontweight', 'bold', 'color', [0 .8 .8], ...
-                'horizontalalign','center')
-        end
-    end
+    % if seeds for the peaks were provided, assign them
+    PhasesCandidates(all(~isnan(p.CCseeds),2),:) = p.CCseeds(all(~isnan(p.CCseeds),2),:);
 end
 
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % now working with each channel sequentially
 
-% work with the DNA content
+
+% first working with the DNA content
 f = ksdensity(logDNA,p.xDNA);
 
 if p.plotting
-    subplot(323)
+    ax(3) = get_newaxes(plot_pos(3,:),1);
     plot(p.xDNA, f)
-    hold on
 end
 
 % take only the cells with low EdU
@@ -206,7 +214,7 @@ if length(DNAPks)>1
         % 2D analysis matching S peak
         DNAPks = max(DNAPks(DNAPks<PhasesCandidates(2,1)));
     else
-        % take the lowest peak (most likely case in doubt)
+        % take the peak with lowest DNA value (most likely case in doubt)
         DNAPks = min(DNAPks);
     end
 end
@@ -214,12 +222,12 @@ end
 if p.plotting, plot(DNAPks, .1, 'xk'); end
 
 
-% work with EdU
+%%%%%%%%%%%%%%%%%%%%%%
+% now working with EdU
 f = ksdensity(logEdU,p.xEdU);
 if p.plotting
-    subplot(324)
+    ax(4) = get_newaxes(plot_pos(4,:),1);
     plot(p.xEdU, f)
-    hold on
 end
 % find the low EdU (G1 and early S)
 lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & ...
@@ -234,69 +242,71 @@ if p.plotting, plot(p.xEdU, f, '--'), end
 EdUPks = p.xEdU(idx(1));
 
 %
-% get the high EdU (S)
+% get the peak with high EdU values (S)
 hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUPks+EdUshift*.8;
 if any(hE)
-    % some S cells
+    % found some cells likely in S phase
     f = ksdensity(logEdU(hE),p.xEdU);
     if p.plotting, plot(p.xEdU, f, ':'), end
     
-    [pks, idx] = findpeaks(smooth(f,p.nsmooth));
-    idx = idx(pks>max(pks/10)); % remove lesser peaks
-    pks = pks(pks>max(pks/10));
-    hEdUPks = idx(sortidx(pks,'descend'));
+    [pks, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend');
+    hEdUPks = idx(pks>max(pks/10)); % remove lesser peaks
+    
     if any(p.xEdU(hEdUPks)>(EdUPks+EdUshift))
-        % should be at least 1 above the EdU peak in G1
+        % should be at least EdUshift above the EdU value in G1 peak
         EdUPks = [EdUPks ...
             p.xEdU(hEdUPks(find(p.xEdU(hEdUPks)>(EdUPks+EdUshift),1,'first'))) EdUPks];
     else
-        % set by default
+        % set by default if no good candidate
         EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
     end
     
     % cut off is set half way between the peaks
     EdUcutoff = mean(EdUPks([1 2]));
-    ylims = [0 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
+    ylims = [p.xEdU(3) min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
     
     if p.plotting
         % plot the location of the peaks
         plot(EdUPks, .1, 'xk');
         plot(EdUcutoff, .1, 'xk');
-        xlim(ylims)
     end
     
     % get back to the DNA to find the S location
     hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUcutoff;
+    % get the distribution of cells in S phase
     f = ksdensity(logDNA(hE),p.xDNA);
     
     if p.plotting
-        subplot(323)
+        set(gcf,'currentaxes',ax(3))
         plot(p.xDNA, f, '-.')
     end
     
-    [pks, idx] = findpeaks(smooth(f,3*p.nsmooth));
-    idx = idx(pks>max(pks/10)); % remove lesser peaks
-    pks = pks(pks>max(pks/10));
-    DNAPks = [DNAPks p.xDNA(idx(argmax(pks)))];
+    [pks, idx] = findpeaks(smooth(f,3*p.nsmooth),'sortstr','descend', 'Npeaks', 1);
+    DNAPks = [DNAPks p.xDNA(idx)];
     
 else
-    % no S cells
+    % no cells found in S phase
     
     % set arbitrary value for high S
     EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
     EdUcutoff = mean(EdUPks([1 2]));
-    ylims = [0 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
+    ylims = [-.02 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
     
-    % set default DNA content
+    % set default DNA content (1.4 fold)
     DNAPks = DNAPks+[0 log10(2)*.5];
 end
 
 
-% get back to the DNA to find the G2
-hD = logDNA>DNAPks(1)+.4*log10(2) & logEdU<EdUcutoff;
+EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
+
+%%%%%%%%%%%%%%%%%%%%%%
+% working with DNA again to find the G2
+
+hD = logDNA>DNAPks(1)+.4*log10(2) & logEdU<EdUGates(1);
+% get the cells likely to be in G2 phase
+
 if any(hD)
-    % some G2 cells
-    
+    % found some cells likely in G2 phase
     f = ksdensity(logDNA(hD),p.xDNA);
     
     if p.plotting
@@ -331,65 +341,212 @@ if any(hD)
     [~, idx] = findpeaks(-smooth(f,5));
     DNAcutoff = mean(p.xDNA(idx(p.xDNA(idx)>DNAPks(1) & p.xDNA(idx)<DNAPks(3))));
     if isnan(DNAcutoff)
+        % no good candidate; set by default
         DNAcutoff = DNAPks(2);
     end
     
-    d1 = DNAcutoff-DNAPks(1);
-    d2 = DNAPks(3)-DNAcutoff;
-    xlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))];
-    if p.plotting
-        plot(DNAPks, 0, 'xk');
-        plot(DNAcutoff, 0, 'xk');
-        xlim(xlims)
-    end
 else
-    % no G2 cells
+    % no cells found in G2 phase
     
+    % set default values (2-fold for G2)
     DNAcutoff = DNAPks(1)+.3*log10(2);
     DNAPks = [DNAPks DNAPks(1)+log10(2)];
     
 end
 
-% define areas
-G1range = [DNAPks(1)-d1 DNAcutoff];
-G2range = [DNAcutoff DNAPks(3)+d2];
-Gates = struct('G1', [G1range' [p.xEdU(1) EdUcutoff]'], ...
-    'S', [ [G1range(1) G2range(2)]', [EdUcutoff EdUPks(2)+EdUcutoff*.5]'], ...
-    'G2', [G2range' [p.xEdU(1) EdUcutoff]'] );
-
-CCfrac = [mean(logDNA>=G1range(1) & logDNA<G1range(2) & logEdU<EdUcutoff) ...
-    mean(logDNA>=G1range(1) & logDNA<G2range(2) & logEdU>=EdUcutoff) ...
-    mean(logDNA>=G2range(1) & logDNA<G2range(2) & logEdU<EdUcutoff) ...
-    mean(logDNA<G1range(1) | logDNA>G2range(2) )];
-
-CCpeaks = [DNAPks' EdUPks'];
-
+% define the DNA range and gates
+d1 = DNAcutoff-DNAPks(1);
+d2 = DNAPks(3)-DNAcutoff;
+xlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))];
 if p.plotting
-    % plots with both channels
-    subplot(325)
-    plot(G1range([1 1 2 2]), [0 EdUcutoff EdUcutoff 0], '-r')
-    plot(G2range([1 1 2 2]), [0 EdUcutoff EdUcutoff 0], '-r')
-    plot([G1range([1 1]) G2range([2 2])], ...
-        [EdUPks(2)+EdUcutoff*.5 EdUcutoff EdUcutoff EdUPks(2)+EdUcutoff*.5], '-r')
-    
-    phases = {'G1' 'S' 'G2'};
-    for i=1:3
-        text(DNAPks(i), EdUPks(i), phases{i}, ...
-            'fontsize', 14, 'fontweight', 'bold', 'color', 'k', ...
-            'horizontalalign','center')
-    end
-    xlim(xlims)
-    ylim(ylims)
-    
-    
-    subplot(326)
-    plot(DNAPks, EdUPks, 'xk')
-    
-    xlim(xlims)
-    ylim(ylims)
+    plot(DNAPks, 0, 'xk');
+    plot(DNAcutoff, 0, 'xk');
 end
-%%
+
+% defines the gates
+DNAGates = [DNAPks(1)-d1 DNAcutoff DNAPks(3)+d2];
+
+% compare with input in present
+EvaluatedDNAGates = DNAGates;
+if ~isempty(p.DNAGates)
+    if nanmax(DNAGates - p.DNAGates)>.2
+        warnprintf('Large differences between input DNA gates and calculates ones')
+    end
+    DNAGates = p.DNAGates;
+end
+
+EvaluatedEdUGates = EdUGates;
+if ~isempty(p.EdUGates)
+    if nanmax(EdUGates - p.EdUGates)>.2
+        warnprintf('Large differences between input DNA gates and calculates ones')
+    end
+    EdUGates = p.EdUGates;
+end
+
+% get the fraction of cells in each phase
+[CCfrac, CCpeaks, CellIdentity] = EvalCC();
+
 if p.plotting
-    pause
+    % plot the evaluated phase positions
+    phases = {'G1' 'S' 'G2'};
+    for i=5:6
+        for j=1:3
+            set(gcf,'currentaxes', ax(i))
+            text(EvaluatedPhasesCandidates(j,1), EvaluatedPhasesCandidates(j,2), phases{j}, ...
+                'fontsize', 14, 'fontweight', 'bold', 'color', [.6 .9 .1], ...
+                'horizontalalign','center')
+            text(PhasesCandidates(j,1), PhasesCandidates(j,2), phases{j}, ...
+                'fontsize', 14, 'fontweight', 'bold', 'color', [.1 .1 .1], ...
+                'horizontalalign','center')
+        end
+    end
+    % plot the evaluated gates
+    plot(ax(1), 10.^EvaluatedDNAGates([1 1 1 2 2 2 3 3]), ...
+        max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
+    plot(ax(3), EvaluatedDNAGates([1 1 1 2 2 2 3 3]), ...
+        max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
+    plot(ax(4), EvaluatedEdUGates([1 1 1 2 2]), ...
+        max(ylim(ax(4)))*[0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
+    for i=5:6
+        plot(ax(i), EvaluatedDNAGates([1 1 3 3 1 1 3 2 2 2]), ...
+            [-1 EvaluatedEdUGates([2 2]) -1 NaN EvaluatedEdUGates([1 1]) ...
+            NaN -1 EvaluatedEdUGates(1)], '--', 'color', [.6 .9 .1], 'linewidth', 2)
+    end
+    
+    hgates = [];
+    hphases = [];
+    refreshGates()
+    
+    plot(ax(5),DNAPks, EdUPks, 'xk')
+    
+    xlim(ax(3),xlims)
+    xlim(ax(4),ylims)
+    for i=[5 6]
+        xlim(ax(i),xlims)
+        ylim(ax(i),ylims)
+    end
+    
+    if p.interactive
+        % Manual adjustments for DNA content
+        figpos = get(gcf,'position');
+        DNAslides = {};
+        for i=1:3
+            DNAslides{i} = uicontrol('style', 'slider', 'callback', {@setDNAGates,i});
+            DNAslides{i}.Units = 'normalized';
+            DNAslides{i}.Position = [plot_pos(6,1)-15/figpos(3) plot_pos(6,2)-.03*i-.01 plot_pos(6,3)+30/figpos(3) .03];
+            DNAslides{i}.Value = (DNAGates(i)-xlims(1))/diff(xlims);
+        end
+        
+        % Manual adjustments for EdU content
+        figpos = get(gcf,'position');
+        
+        EdUslides = {};
+        for i=1:2
+            EdUslides{i} = uicontrol('style', 'slider', 'callback', {@setEdU, i});
+            EdUslides{i}.Units = 'normalized';
+            EdUslides{i}.Position = [plot_pos(6,1)-.04*i-.02 plot_pos(6,2)-15/figpos(4) .04 plot_pos(6,4)+30/figpos(4)];
+            EdUslides{i}.Value = (EdUGates(i)-ylims(1))/diff(ylims);
+        end
+        
+        approve = uicontrol('style', 'pushbutton');
+        approve.Units = 'normalized';
+        approve.Position = plot_pos(8,:);
+        approve.String = 'Approve';
+        approve.Callback = @approveGate;
+        
+        waitfor(approve, 'backgroundcolor', 'g')
+    end
+    
+    if ~isempty(p.savefigure)
+        set(gcf,'Renderer','painters')
+        saveas(gcf,p.savefigure)
+    end
+    
     figure(currfig)
+end
+
+
+
+%%
+
+    function setDNAGates(src, event, x)
+        DNAGates(x) = (diff(xlims)*src.Value)+xlims(1);
+        DNAPks = [mean(DNAGates(1:2)) DNAGates(2) mean(DNAGates(2:3))];
+        [CCfrac, CCpeaks, CellIdentity] = EvalCC();
+        if p.plotting, refreshGates(), end
+    end
+
+
+    function setEdU(src, event, x)
+        EdUGates(x) = (diff(ylims)*src.Value)+ylims(1);
+        EdUPks = [EdUGates(1)/2 mean(EdUGates) EdUGates(1)/2];
+        [CCfrac, CCpeaks, CellIdentity] = EvalCC();
+        if p.plotting, refreshGates(), end
+    end
+
+
+    function refreshGates()
+        if isempty(hphases)
+            for iA = 1:2
+                set(gcf,'currentaxes', ax(iA+4))
+                for iG=1:3
+                    hphases(iA,iG) = text(DNAPks(iG), EdUPks(iG), phases{iG}, ...
+                        'fontsize', 16, 'fontweight', 'bold', 'color', [.7 .2 0], ...
+                        'horizontalalign','center');
+                end
+            end
+        end
+        if isempty(hgates)
+            for iG=[1 3:6]
+                hgates(iG) = plot(ax(iG),NaN, NaN, '-r','linewidth', 1+(iG>4));
+            end
+        end
+        
+        for iG=1:3
+            for iA = 1:2
+                set(hphases(iA,iG), 'position', [DNAPks(iG), EdUPks(iG)])
+            end
+        end
+        
+        set(hgates(1), 'xdata', 10.^DNAGates([1 1 1 2 2 2 3 3]), ...
+            'ydata', max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1])
+        set(hgates(3), 'xdata', DNAGates([1 1 1 2 2 2 3 3]), ...
+            'ydata', max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1])
+        set(hgates(4), 'xdata', EdUGates([1 1 1 2 2]), ...
+            'ydata', max(ylim(ax(4)))*[0 1 NaN 0 1])
+        for iG=5:6
+            set(hgates(iG), 'xdata', DNAGates([1 1 3 3 1 1 3 2 2 2]), ...
+                'ydata', [-1 EdUGates([2 2]) -1 NaN EdUGates([1 1]) NaN -1 EdUGates(1)])
+        end
+        set(gcf,'currentaxes',ax(7))
+        cla
+        ptxt = pie(CCfrac, {'G1' 'S' 'G2' sprintf('other %.0f%%', 100*CCfrac(4))});
+        set(ptxt(end),'fontsize',12, 'fontweight','bold')
+        
+    end
+
+    function [frac, pks, cellID] = EvalCC()
+        
+        cellID = (logDNA>=DNAGates(1) & logDNA<DNAGates(2) & logEdU<EdUGates(1)) ...
+            +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(3) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ...
+            +3*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1));
+        
+        for id = 1:4
+            frac(id) = mean(cellID==mod(id,4));
+        end
+        
+        pks = [DNAPks' EdUPks'];
+    end
+
+    function approveGate(src, event)
+        for iB=1:3
+            DNAslides{iB}.Visible = 'off';
+        end
+        for iB=1:2
+            EdUslides{iB}.Visible = 'off';
+        end
+        
+        set(src, 'backgroundcolor', 'g')
+    end
+
 end

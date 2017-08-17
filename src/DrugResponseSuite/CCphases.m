@@ -1,5 +1,6 @@
-function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU] = CCphases(DNA, EdU, varargin)
+function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims] = CCphases(DNA, EdU, varargin)
 
+assert(all(size(DNA)==size(EdU)))
 
 p = inputParser;
 
@@ -12,6 +13,8 @@ addParameter(p, 'CCseeds', [], @(x) ismatrix(x) && all(size(x)==[3 2]))
 addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & all(size(x)==[3 2]) & all(~isnan(x(:))))
 addParameter(p, 'EdUGates', [], @(x) isvector(x) & length(x)==2 & all(~isnan(x(:))))
 addParameter(p, 'savefigure', '', @ischar)
+addParameter(p, 'EdUlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
+addParameter(p, 'DNAlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 
 
 parse(p,varargin{:});
@@ -263,7 +266,7 @@ if any(hE)
     
     % cut off is set half way between the peaks
     EdUcutoff = mean(EdUPks([1 2]));
-    ylims = [p.xEdU(3) min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
+    EdUlims = [p.xEdU(3) min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
     
     if p.plotting
         % plot the location of the peaks
@@ -290,11 +293,12 @@ else
     % set arbitrary value for high S
     EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
     EdUcutoff = mean(EdUPks([1 2]));
-    ylims = [-.02 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
+    EdUlims = [-.02 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
     
     % set default DNA content (1.4 fold)
     DNAPks = DNAPks+[0 log10(2)*.5];
 end
+if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
 
 EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
@@ -357,7 +361,8 @@ end
 % define the DNA range and gates
 d1 = DNAcutoff-DNAPks(1);
 d2 = DNAPks(3)-DNAcutoff;
-xlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))];
+if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
+DNAlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))]; end
 if p.plotting
     plot(DNAPks, 0, 'xk');
     plot(DNAcutoff, 0, 'xk');
@@ -419,11 +424,11 @@ if p.plotting
     
     plot(ax(5),DNAPks, EdUPks, 'xk')
     
-    xlim(ax(3),xlims)
-    xlim(ax(4),ylims)
+    xlim(ax(3),DNAlims)
+    xlim(ax(4),EdUlims)
     for i=[5 6]
-        xlim(ax(i),xlims)
-        ylim(ax(i),ylims)
+        xlim(ax(i),DNAlims)
+        ylim(ax(i),EdUlims)
     end
     
     if p.interactive
@@ -434,7 +439,7 @@ if p.plotting
             DNAslides{i} = uicontrol('style', 'slider', 'callback', {@setDNAGates,i});
             DNAslides{i}.Units = 'normalized';
             DNAslides{i}.Position = [plot_pos(6,1)-15/figpos(3) plot_pos(6,2)-.03*i-.01 plot_pos(6,3)+30/figpos(3) .03];
-            DNAslides{i}.Value = (DNAGates(i)-xlims(1))/diff(xlims);
+            DNAslides{i}.Value = (DNAGates(i)-DNAlims(1))/diff(DNAlims);
         end
         
         % Manual adjustments for EdU content
@@ -445,7 +450,7 @@ if p.plotting
             EdUslides{i} = uicontrol('style', 'slider', 'callback', {@setEdU, i});
             EdUslides{i}.Units = 'normalized';
             EdUslides{i}.Position = [plot_pos(6,1)-.04*i-.02 plot_pos(6,2)-15/figpos(4) .04 plot_pos(6,4)+30/figpos(4)];
-            EdUslides{i}.Value = (EdUGates(i)-ylims(1))/diff(ylims);
+            EdUslides{i}.Value = (EdUGates(i)-EdUlims(1))/diff(EdUlims);
         end
         
         approve = uicontrol('style', 'pushbutton');
@@ -470,7 +475,7 @@ end
 %%
 
     function setDNAGates(src, event, x)
-        DNAGates(x) = (diff(xlims)*src.Value)+xlims(1);
+        DNAGates(x) = (diff(DNAlims)*src.Value)+DNAlims(1);
         DNAPks = [mean(DNAGates(1:2)) DNAGates(2) mean(DNAGates(2:3))];
         [CCfrac, CCpeaks, CellIdentity] = EvalCC();
         if p.plotting, refreshGates(), end
@@ -478,7 +483,7 @@ end
 
 
     function setEdU(src, event, x)
-        EdUGates(x) = (diff(ylims)*src.Value)+ylims(1);
+        EdUGates(x) = (diff(EdUlims)*src.Value)+EdUlims(1);
         EdUPks = [EdUGates(1)/2 mean(EdUGates) EdUGates(1)/2];
         [CCfrac, CCpeaks, CellIdentity] = EvalCC();
         if p.plotting, refreshGates(), end
@@ -520,7 +525,7 @@ end
         end
         set(gcf,'currentaxes',ax(7))
         cla
-        ptxt = pie(CCfrac, {'G1' 'S' 'G2' sprintf('other %.0f%%', 100*CCfrac(4))});
+        ptxt = pie(CCfrac+1e-4, {'G1' 'S' 'G2' sprintf('other %.0f%%', 100*CCfrac(4))});
         set(ptxt(end),'fontsize',12, 'fontweight','bold')
         
     end

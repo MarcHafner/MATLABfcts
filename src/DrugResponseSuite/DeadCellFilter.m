@@ -1,4 +1,4 @@
-function [LiveCells, DeadCells, Gates, AliveIdx] = DeadCellFilter(LDRtxt, varargin)
+function [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
 
 p = inputParser;
 
@@ -12,6 +12,8 @@ addParameter(p, 'nsmooth', 5, @isnumeric)
 addParameter(p, 'DNApks', [NaN NaN], @(x) isvector(x) & length(x)==2)
 addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
 addParameter(p, 'savefigure', '', @ischar)
+addParameter(p, 'LDRlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
+addParameter(p, 'DNAlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 
 parse(p,varargin{:});
 p = p.Results;
@@ -53,7 +55,9 @@ if p.plotting
     .6 .15 .3 .3];
 
     get_newfigure(45674,[505 600 550 500])
-    ylims = quantile(LDRtxt, [1e-3 .999]);
+    
+    if ~isempty(p.LDRlims), LDRlims = p.LDRlims; else
+    LDRlims = quantile(LDRtxt, [5e-3 .995])+[-1 1]*2.5*diff(p.xLDR(1:2)); end
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -64,7 +68,7 @@ if p.plotting
     pltgt1 = plot([Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)], ...
         [0 0 .5 .5 0]*log10(max(f)), 'r-');
     
-    xlim(ylims)
+    xlim(LDRlims)
     ylim([0 log10(max(f))-log10(max(f)/100)+.1])
     set(gca,'xtick',[],'ytick',[])
     
@@ -83,9 +87,10 @@ if useDNA
     if p.plotting
         % plot original data
         get_newaxes(plot_pos(2,:),1)
-        xlims = quantile(logDNA, [1e-3 .999])+[-.1 .2];
+        if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
+        DNAlims = quantile(logDNA, [5e-3 .995])+[-1 1]*2.5*diff(p.xDNA(1:2)); end
         plot(p.xDNA, f2, '-k')
-        xlim(xlims)
+        xlim(DNAlims)
         set(gca,'xtick',[],'ytick',[])
     end
     
@@ -181,8 +186,8 @@ if useDNA
             '-r', 'linewidth', 2);
         plot(DNAPks, [0 0], 'xk')
         plot(DNAPks, [0 0], 'ok', 'markersize', 14)
-        xlim(xlims)
-        ylim(ylims)
+        xlim(DNAlims)
+        ylim(LDRlims)
     end
     
     
@@ -199,23 +204,23 @@ if p.interactive
     minLDR = uicontrol('style', 'slider', 'callback', {@setGates,1});
     minLDR.Units = 'normalized';
     minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)/2+30/figpos(3) .03];
-    minLDR.Value = max(0,(Gates(1,1)-ylims(1))/diff(ylims));
+    minLDR.Value = max(0,(Gates(1,1)-LDRlims(1))/diff(LDRlims));
     
     maxLDR = uicontrol('style', 'slider', 'callback', {@setGates,2});
     maxLDR.Units = 'normalized';
     maxLDR.Position = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.08 plot_pos(1,3)+30/figpos(3) .03];
-    maxLDR.Value = (Gates(1,2)-ylims(1))/diff(ylims);
+    maxLDR.Value = (Gates(1,2)-LDRlims(1))/diff(LDRlims);
     
     if useDNA
         minDNA = uicontrol('style', 'slider', 'callback', {@setGates,3});
         minDNA.Units = 'normalized';
         minDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.04 plot_pos(2,3)+30/figpos(3) .03];
-        minDNA.Value = (Gates(2,1)-xlims(1))/diff(xlims);
+        minDNA.Value = (Gates(2,1)-DNAlims(1))/diff(DNAlims);
         
         maxDNA = uicontrol('style', 'slider', 'callback', {@setGates,4});
         maxDNA.Units = 'normalized';
         maxDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.08 plot_pos(2,3)+30/figpos(3) .03];
-        maxDNA.Value = (Gates(2,2)-xlims(1))/diff(xlims);
+        maxDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
     end
     
     approve = uicontrol('style', 'pushbutton');
@@ -239,9 +244,9 @@ end
 %%
     function setGates(src, event, x)
         if x<3
-            Gates(1,x) = (diff(ylims)*src.Value)+ylims(1);
+            Gates(1,x) = (diff(LDRlims)*src.Value)+LDRlims(1);
         else
-            Gates(2,x-2) = (diff(xlims)*src.Value)+xlims(1);
+            Gates(2,x-2) = (diff(DNAlims)*src.Value)+DNAlims(1);
         end
         set(pltgt1, 'XData', [Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)])
         if useDNA

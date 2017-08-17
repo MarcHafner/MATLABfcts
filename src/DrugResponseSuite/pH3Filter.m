@@ -1,4 +1,4 @@
-function [CCfrac, pH3CellIdentity, pH3cutoff] = pH3Filter(pH3, CellIdentity, varargin)
+function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, varargin)
 
 assert(all(size(pH3)==size(CellIdentity)))
 
@@ -7,6 +7,7 @@ p = inputParser;
 addParameter(p, 'plotting', false, @islogical)
 addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xpH3', 2.5:.02:8, @isvector)
+addParameter(p, 'pH3lims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 addParameter(p, 'pH3cutoff', [], @isscalar)
 % addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
 addParameter(p, 'savefigure', '', @ischar)
@@ -24,7 +25,7 @@ if ~isempty(p.savefigure), p.plotting = true; end
 logpH3 = log10(min(max(pH3, 10^p.xpH3(3)),10^p.xpH3(end-2)));
 
 % only take the cells in G1 or G2
-f = ksdensity(logpH3(CellIdentity==1 | CellIdentity==3), p.xpH3, 'width', 2.5*diff(p.xpH3(1:2)));
+f = ksdensity(logpH3(CellIdentity==1 | CellIdentity==3), p.xpH3, 'width', 3*diff(p.xpH3(1:2)));
 
 if ~isempty(p.pH3cutoff)
     % already defined gate
@@ -48,7 +49,8 @@ if p.plotting
     .6 .08 .3 .4];
 
     get_newfigure(45679,[505 100 550 300])
-    xlims = quantile(logpH3, [1e-3 .999]);
+    if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else
+    pH3lims = quantile(logpH3, [5e-3 .995])+[-1 1]*3*diff(p.xpH3(1:2)); end
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -62,7 +64,7 @@ if p.plotting
     pltgt1 = plot([1 1]*pH3cutoff, ...
         [0 .5]*log10(max(f)), 'r-');
     
-    xlim(xlims)
+    xlim(pH3lims)
     ylim([0 log10(max(f))-log10(max(f)/100)+.1])
     set(gca,'xtick',[],'ytick',[])
     
@@ -87,7 +89,7 @@ if p.interactive
     minpH3 = uicontrol('style', 'slider', 'callback', {@setCutoff,1});
     minpH3.Units = 'normalized';
     minpH3.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)+30/figpos(3) .03];
-    minpH3.Value = max(0,(pH3cutoff-xlims(1))/diff(xlims));
+    minpH3.Value = max(0,(pH3cutoff-pH3lims(1))/diff(pH3lims));
     
     
     
@@ -111,7 +113,7 @@ if p.plotting
 end
 %%
     function setCutoff(src, event, x)
-        pH3cutoff = (diff(xlims)*src.Value)+xlims(1);        
+        pH3cutoff = (diff(pH3lims)*src.Value)+pH3lims(1);        
         set(pltgt1, 'XData', pH3cutoff*[1 1])
         EvalMphase();
     end
@@ -129,13 +131,13 @@ end
         if p.plotting
             set(gcf,'currentaxes', pieax)
             cla
-            ptxt = pie(mean([Midx ~Midx]) ,{sprintf('M-phase cells (%.1f%%)', ...
+            ptxt = pie(mean([Midx ~Midx])+1e-4 ,{sprintf('M-phase cells (%.1f%%)', ...
                 100*mean(Midx)), 'Other'});
             set(ptxt(2),'fontsize',12, 'fontweight','bold')
             
             set(gcf,'currentaxes', pieax2)
             cla
-            pie(CCfrac, {'G1' 'S' 'G2' 'M' 'other'})
+            pie(CCfrac+1e-4, {'G1' 'S' 'G2' 'M' 'other'})
         end
     end
 

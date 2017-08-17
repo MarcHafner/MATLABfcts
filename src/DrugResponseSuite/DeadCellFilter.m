@@ -43,21 +43,20 @@ else
     Gates = [-Inf LDRcutoff];
 end
 
+if ~isempty(p.LDRlims), LDRlims = p.LDRlims; else
+    LDRlims = quantile(LDRtxt, [5e-3 .995])+[-1 1]*2.5*diff(p.xLDR(1:2)); end
 
 if p.plotting
     % plotting results
     currfig = gcf;
     
     plot_pos = [
-    .07 .6 .4 .37;
-    .57 .6 .4 .37;
-    .15 .05 .4 .4
-    .6 .15 .3 .3];
-
-    get_newfigure(45674,[505 600 550 500])
+        .07 .6 .4 .37;
+        .57 .6 .4 .37;
+        .15 .05 .4 .4
+        .6 .15 .3 .3];
     
-    if ~isempty(p.LDRlims), LDRlims = p.LDRlims; else
-    LDRlims = quantile(LDRtxt, [5e-3 .995])+[-1 1]*2.5*diff(p.xLDR(1:2)); end
+    get_newfigure(45674,[5 1000 550 300])
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -72,8 +71,8 @@ if p.plotting
     ylim([0 log10(max(f))-log10(max(f)/100)+.1])
     set(gca,'xtick',[],'ytick',[])
     
-    pieax = get_newaxes(plot_pos(4,:));   
-    set(gca,'xtick',[],'ytick',[],'visible','off') 
+    pieax = get_newaxes(plot_pos(4,:));
+    set(gca,'xtick',[],'ytick',[],'visible','off')
 end
 
 
@@ -84,11 +83,11 @@ if useDNA
     logDNA = log10(min(max(DNA, 10^p.xDNA(3)),10^p.xDNA(end-2)));
     f2 = ksdensity(logDNA,p.xDNA);
     
+    if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
+        DNAlims = quantile(logDNA, [5e-3 .995])+[-1 1]*2.5*diff(p.xDNA(1:2)); end
     if p.plotting
         % plot original data
         get_newaxes(plot_pos(2,:),1)
-        if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
-        DNAlims = quantile(logDNA, [5e-3 .995])+[-1 1]*2.5*diff(p.xDNA(1:2)); end
         plot(p.xDNA, f2, '-k')
         xlim(DNAlims)
         set(gca,'xtick',[],'ytick',[])
@@ -203,7 +202,7 @@ if p.interactive
     
     minLDR = uicontrol('style', 'slider', 'callback', {@setGates,1});
     minLDR.Units = 'normalized';
-    minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)/2+30/figpos(3) .03];
+    minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)+30/figpos(3) .03];
     minLDR.Value = max(0,(Gates(1,1)-LDRlims(1))/diff(LDRlims));
     
     maxLDR = uicontrol('style', 'slider', 'callback', {@setGates,2});
@@ -243,17 +242,31 @@ if p.plotting
 end
 %%
     function setGates(src, event, x)
-        if x<3
+        if x<3 % LDR gates
             Gates(1,x) = (diff(LDRlims)*src.Value)+LDRlims(1);
-        else
+            % check for proper ordering
+            if Gates(1,1)>Gates(1,2)
+                Gates(1,1)=Gates(1,2);
+                minLDR.Value = max(0,(Gates(1,2)-LDRlims(1))/diff(LDRlims));
+                maxLDR.Value = (Gates(1,2)-LDRlims(1))/diff(LDRlims);
+            end
+        else % DNA gates
             Gates(2,x-2) = (diff(DNAlims)*src.Value)+DNAlims(1);
+            % check for proper ordering
+            if Gates(2,1)>Gates(2,2)
+                Gates(2,1)=Gates(2,2);
+                minDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
+                maxDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
+            end
         end
+        
         set(pltgt1, 'XData', [Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)])
         if useDNA
             set(pltgt2, 'XData', Gates(2,[1 1 2 2]))
             set(pltgt3, 'XData', Gates(2,[1 1 2 2 1]), 'YData', max(Gates(1,[1 2 2 1 1]),0));
         end
         
+        % re-evluate assignments
         [LiveCells, DeadCells, AliveIdx] = EvalAliveIdx();
     end
 
@@ -268,7 +281,7 @@ end
         if p.plotting
             set(gcf,'currentaxes', pieax)
             cla
-            ptxt = pie([alive dead] ,{'Live cells' sprintf('Dead cells (%.0f%%)', ...
+            ptxt = pie([alive dead]+.1,{'Live cells' sprintf('Dead cells (%.0f%%)', ...
                 100*dead/(alive+dead))});
             set(ptxt(4),'fontsize',12, 'fontweight','bold')
         end

@@ -38,6 +38,8 @@ else
     pH3cutoff = p.xpH3(ceil(max(min(minpk, pk+6*pH3wdth), pk+2*pH3wdth)));
 end
 
+if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else
+    pH3lims = quantile(logpH3, [5e-3 .995])+[-1 1]*3*diff(p.xpH3(1:2)); end
 
 if p.plotting
     % plotting results
@@ -48,9 +50,7 @@ if p.plotting
     .6 .55 .3 .4
     .6 .08 .3 .4];
 
-    get_newfigure(45679,[505 100 550 300])
-    if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else
-    pH3lims = quantile(logpH3, [5e-3 .995])+[-1 1]*3*diff(p.xpH3(1:2)); end
+    get_newfigure(45679,[5 5 550 250])
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)

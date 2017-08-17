@@ -52,7 +52,7 @@ EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
 if p.plotting
     currfig = gcf;
     
-    get_newfigure(45654,[5 600 550 650])
+    get_newfigure(45654,[5 350 550 650])
     % define positions
     plot_pos = [
         .04 .8  .2 .18
@@ -284,7 +284,7 @@ if any(hE)
         plot(p.xDNA, f, '-.')
     end
     
-    [pks, idx] = findpeaks(smooth(f,3*p.nsmooth),'sortstr','descend', 'Npeaks', 1);
+    [~, idx] = findpeaks(smooth(f,3*p.nsmooth),'sortstr','descend', 'Npeaks', 1);
     DNAPks = [DNAPks p.xDNA(idx)];
     
 else
@@ -362,7 +362,7 @@ end
 d1 = DNAcutoff-DNAPks(1);
 d2 = DNAPks(3)-DNAcutoff;
 if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
-DNAlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))]; end
+    DNAlims = [max(DNAPks(1)-3*d1, p.xDNA(2)) min(DNAPks(3)+3*d2, p.xDNA(end-1))]; end
 if p.plotting
     plot(DNAPks, 0, 'xk');
     plot(DNAcutoff, 0, 'xk');
@@ -476,7 +476,16 @@ end
 
     function setDNAGates(src, event, x)
         DNAGates(x) = (diff(DNAlims)*src.Value)+DNAlims(1);
-        DNAPks = [mean(DNAGates(1:2)) DNAGates(2) mean(DNAGates(2:3))];
+        % check for proper ordering
+        if x<3 && DNAGates(x)>DNAGates(x+1)
+            DNAGates(x) = DNAGates(x+1);
+        elseif x>1 && DNAGates(x)<DNAGates(x-1)
+            DNAGates(x) = DNAGates(x-1);
+        end
+        for iG=1:3
+            DNAslides{iG}.Value = (DNAGates(iG)-DNAlims(1))/diff(DNAlims);
+        end
+        % re-evluate assignments
         [CCfrac, CCpeaks, CellIdentity] = EvalCC();
         if p.plotting, refreshGates(), end
     end
@@ -484,7 +493,12 @@ end
 
     function setEdU(src, event, x)
         EdUGates(x) = (diff(EdUlims)*src.Value)+EdUlims(1);
-        EdUPks = [EdUGates(1)/2 mean(EdUGates) EdUGates(1)/2];
+        % check for proper ordering
+        if EdUGates(1)>EdUGates(2)
+            EdUGates(1)=EdUGates(2);
+            EdUslides{1}.Value = (EdUGates(1)-EdUlims(1))/diff(EdUlims);
+        end
+        % re-evluate assignments
         [CCfrac, CCpeaks, CellIdentity] = EvalCC();
         if p.plotting, refreshGates(), end
     end
@@ -538,6 +552,20 @@ end
         
         for id = 1:4
             frac(id) = mean(cellID==mod(id,4));
+        end
+        
+        for iG=1:3
+            if any(cellID==iG)
+                [~, pkidx] = findpeaks(smooth( ksdensity(logDNA(cellID==iG),p.xDNA), ...
+                    3*p.nsmooth), 'sortstr','descend', 'Npeaks', 1);
+                DNAPks(iG) = p.xDNA(pkidx);
+                [~, pkidx] = findpeaks(smooth(ksdensity( logEdU(cellID==iG),p.xEdU), ...
+                    3*p.nsmooth), 'sortstr','descend', 'Npeaks', 1);
+                EdUPks(iG) = p.xEdU(pkidx);
+            else
+                DNAPks(iG) = mean(DNAGates([iG 2]));
+                EdUPks(iG) = mean([EdUGates(1) (iG==2)*EdUGates(2)]);
+            end
         end
         
         pks = [DNAPks' EdUPks'];

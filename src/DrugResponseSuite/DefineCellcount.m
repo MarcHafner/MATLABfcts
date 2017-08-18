@@ -7,3 +7,10 @@ elseif ~strcmp(p.Cellcount, 'none')
     temp = p.Cellcount(temp);
     t_raw.Cellcount = temp;
 end
+if ~isfield(p, 'Deadcount') || isempty(p.Deadcount)
+    t_raw.Deadcount = zeros(height(t_raw),1);
+elseif ~strcmp(p.Deadcount, 'none')
+    temp = table2array(t_raw(:,NobjField));
+    temp = p.Deadcount(temp);
+    t_raw.Deadcount = temp;
+end

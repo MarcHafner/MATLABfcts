@@ -22,7 +22,7 @@ addParameter(p, 'ytransform', @(x)x, @(x) isa(x,'function_handle') || ...
     all(cellfun(@(y) isa(y,'function_handle'), x)))
 addParameter(p, 'axischanges', @(x) set(x,'fontsize',6), @(x) isa(x,'function_handle'))
 addParameter(p, 'mean_SEM', true, @islogical)
-addParameter(p, 'plotcolors', @jet, @(x) isnumeric(x) || isa(x,'function_handle'))
+addParameter(p, 'plotcolors', jet(20), @(x) isnumeric(x) || isa(x,'function_handle'))
 addParameter(p, 'xspacing', .03, @isnumeric)
 addParameter(p, 'yspacing', .07, @isnumeric)
 addParameter(p, 'yval_lines', [0 1], @isnumeric)
@@ -167,7 +167,7 @@ for iyp = 1:nRows
         if iyp==nRows, xlabel(gca,p.xaxiskey,'fontweight','bold'), end
         if ixp==1, ylabel(gca, strjoin(p.yaxiskey),'fontweight','bold'), end
 
-        if (ixp==nCols && iyp==nRows) || xidx==size(xplotkeys,1)
+        if ((ixp==nCols && iyp==nRows) || xidx==size(xplotkeys,1)) && ~strcmp(p.colorkey, nocplot)            
             hl = legend(h(ishandle(h)), strcat(p.colorkey, '=', AnyToString(colorkeys(ishandle(h)))), ...
                 'fontsize',6, 'orientation', 'horizontal');
             set(hl, 'position', [.01 .005 .98 .03])

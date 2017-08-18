@@ -1,4 +1,28 @@
 function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, varargin)
+% [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, ...)
+%
+%
+% inputs are :
+%  pH3  -> pH3 values
+%  CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2/M)
+%  
+% optional inputs are:
+%  plotting     -> generates plots
+%  interactive  -> prompt user to validate gating
+%  savefigure   -> name to save image of the results
+%
+%  pH3cutoff    -> predefined cutoff
+%
+%  xpH3         -> sampling values for pH3 channel
+%  pH3lims      -> plot range for pH3 channel
+%
+% outputs are:
+%  CCfrac          -> fraction of cells in each phase (G1, S, G2, M, unclass)
+%  pH3CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2, 4=M)
+%  pH3cutoff       -> selected cutoff for pH3 channel
+%  pH3lims         -> selected range for pH3 channel
+%
+%
 
 assert(all(size(pH3)==size(CellIdentity)))
 
@@ -43,14 +67,14 @@ if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else
 
 if p.plotting
     % plotting results
-    currfig = gcf;
+%     currfig = gcf;
     
     plot_pos = [
     .07 .3 .4 .67;
-    .6 .55 .3 .4
-    .6 .08 .3 .4];
+    .6 .65 .3 .3
+    .6 .08 .3 .5];
 
-    get_newfigure(45679,[5 5 550 250])
+    get_newfigure(45679,[5 5 550 270])
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -109,7 +133,7 @@ if p.plotting
         saveas(gcf,p.savefigure)
     end
     
-    figure(currfig)
+%     figure(currfig)
 end
 %%
     function setCutoff(src, event, x)

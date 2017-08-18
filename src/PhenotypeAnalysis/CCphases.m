@@ -1,4 +1,36 @@
 function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims] = CCphases(DNA, EdU, varargin)
+% [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims] = CCphases(DNA, EdU, ...)
+%
+% inputs are :
+%  DNA  -> Hoechst intensity values
+%  EdU  -> EdU intensity values
+%  
+% optional inputs are:
+%  plotting     -> generates plots
+%  interactive  -> prompt user to validate gating
+%  savefigure   -> name to save image of the results
+%
+%  DNAGates     -> predefined DNA gates
+%  EdUGates     -> predefined EdU gates
+%  CCseeds      -> seeds for DNA/EdU peaks
+%
+%  xDNA         -> sampling values for DNA channel
+%  xEdU         -> sampling values for EdU channel
+%  DNAlims      -> plot range for DNA channel
+%  EdUlims      -> plot range for EdU channel
+%
+% outputs are:
+%  CCpeaks      -> location of DNA/EdU peaks (G1, S, G2) x (DNA, EdU)
+%  CCfrac       -> fraction of cells in each phase (G1, S, G2, unclass)
+%  DNAGates     -> selected DNA gates (3 values)
+%  EdUGates     -> selected EdU gates (2 values)
+%  CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2/M)
+%  logDNA       -> transformed values for DNA channel
+%  logEdU       -> transformed values for EdU channel
+%  DNAlims      -> selected range for DNA channel
+%  EdUlims      -> selected range for EdU channel
+%
+%
 
 assert(all(size(DNA)==size(EdU)))
 
@@ -50,9 +82,9 @@ EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
 
 %
 if p.plotting
-    currfig = gcf;
+%     currfig = gcf;
     
-    get_newfigure(45654,[5 350 550 650])
+    get_newfigure(45654,[5 285 550 600])
     % define positions
     plot_pos = [
         .04 .8  .2 .18
@@ -467,7 +499,7 @@ if p.plotting
         saveas(gcf,p.savefigure)
     end
     
-    figure(currfig)
+%     figure(currfig)
 end
 
 

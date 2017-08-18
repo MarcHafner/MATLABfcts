@@ -1,4 +1,34 @@
 function [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
+% [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
+%
+%
+% inputs are :
+%  LDRtxt  -> LDR values
+%  DNA (optional) -> Hoechst intensity values
+%  
+% optional inputs are:
+%  plotting     -> generates plots
+%  interactive  -> prompt user to validate gating
+%  savefigure   -> name to save image of the results
+%
+%  LDRcutoff    -> predefined cutoff
+%  Gates        -> predefined gates
+%  DNApks       -> seeds for DNA peaks
+%
+%  xLDR         -> sampling values for LDR channel
+%  xDNA         -> sampling values for DNA channel
+%  LDRlims      -> plot range for LDR channel
+%  DNAlims      -> plot range for DNA channel
+%
+% outputs are:
+%  LiveCells    -> number of live cells
+%  DeadCells    -> number of dead cells
+%  Gates        -> selected gates
+%  AliveIdx     -> boolean for live cells
+%  LDRlims      -> selected range for LDR channel
+%  DNAlims      -> selected range for DNA channel
+%
+%
 
 p = inputParser;
 
@@ -34,12 +64,14 @@ if ~isnan(p.Gates(1,2))
     % already defined gate
     Gates = p.Gates(1,:);
     if isnan(p.Gates(1,1)), Gates(1,1) = -Inf; end
+elseif ~isempty(p.LDRcutoff)
+    Gates = [-Inf p.LDRcutoff];
 else
     % determine the spread of the LDRtxt data to define cutoff
     [~, pk, LDRwdth] = findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
     
     [~, minpk] = findpeaks(-f(pk:end),'npeaks',1); minpk=minpk+pk-1;
-    LDRcutoff = p.xLDR(ceil(max(min(minpk, pk+6*LDRwdth), pk+2*LDRwdth)));
+    LDRcutoff = p.xLDR(ceil(max(min(minpk, pk+5*LDRwdth), pk+2.5*LDRwdth)));
     Gates = [-Inf LDRcutoff];
 end
 
@@ -48,7 +80,7 @@ if ~isempty(p.LDRlims), LDRlims = p.LDRlims; else
 
 if p.plotting
     % plotting results
-    currfig = gcf;
+%     currfig = gcf;
     
     plot_pos = [
         .07 .6 .4 .37;
@@ -56,7 +88,7 @@ if p.plotting
         .15 .05 .4 .4
         .6 .15 .3 .3];
     
-    get_newfigure(45674,[5 1000 550 300])
+    get_newfigure(45674,[5 820 550 320])
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -238,7 +270,7 @@ if p.plotting
         saveas(gcf,p.savefigure)
     end
     
-    figure(currfig)
+%     figure(currfig)
 end
 %%
     function setGates(src, event, x)

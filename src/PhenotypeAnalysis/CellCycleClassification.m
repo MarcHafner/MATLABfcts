@@ -1,5 +1,5 @@
-function [t_results, allLiveIdx, allCellIdentity] = CellCycleClassification(t_SingleCelldata, SingleCelldata, varargin)
-% [t_results, allLiveIdx, allCellIdentity] = CellCycleClassification(t_SingleCelldata, SingleCelldata, ...)
+function [t_results, allLiveIdx, allCellIdentity, t_summary] = CellCycleClassification(t_SingleCelldata, SingleCelldata, varargin)
+% [t_results, allLiveIdx, allCellIdentity, t_summary] = CellCycleClassification(t_SingleCelldata, SingleCelldata, ...)
 %
 % inputs are :
 %  t_SingleCelldata  -> metadata for the plates/wells
@@ -19,15 +19,17 @@ function [t_results, allLiveIdx, allCellIdentity] = CellCycleClassification(t_Si
 %  t_results       -> table with all calculated data and test results
 %  allLiveIdx      -> boolean for live cells
 %  allCellIdentity -> cell cycle phase assigned to each cell (dead are NaN)
-%
+%  t_summary       -> table with summary of test results by condition
 %
 
 %% assign inputs and prepare tests
 
+assert(height(t_SingleCelldata)==length(SingleCelldata))
+
 p = inputParser;
 
 % names used for each channel
-addOptional(p, 'Channelnames', ...
+addParameter(p, 'Channelnames', ...
     struct('LDR', 'NucleiSelected_LDRTXTSERSpot8Px', ...
     'DNA', 'NucleiSelected_DNAcontent', ...
     'EdU', 'NucleiSelected_EdUINT', ...
@@ -37,10 +39,21 @@ addOptional(p, 'Channelnames', ...
 addParameter(p, 'savefolder', 'temp/', @ischar)
 % additional keys to consider for ananlyzing the results
 addParameter(p, 'ConditionKeys', {}, @cellstr)
-
+% flags for the type of treatments
 addParameter(p, 'NegCtrlLabel', {'ctl_vehicle' 'untrt'}, @cellstr)
 addParameter(p, 'PosCtrlLabel', {'ctl_toxic' 'ctl_G1' 'ctl_S' 'ctl_G2'}, @cellstr)
-
+% define cutoffs for tests
+addParameter(p, 'TestCutoffs', ...
+     struct(...
+    'FracDead', .1, ...
+    'DeadConsist', .02, ...
+    'Unclass', .05, ...
+    'CCphase', .01, ...
+    'CCphase_pos', @(x)1.3+x+.1, ...
+    'CCConsist', .02, ...
+    'PksConsist', log10(1.2)), ...
+    @(x) isstruct(x) && all(isfield(x, {'FracDead', 'DeadConsist', 'Unclass', ...
+    'CCphase', 'CCphase_pos', 'CCConsist', 'PksConsist'})))
 addParameter(p, 'interactive', false, @islogical) %%%   option ?? <<<<<<<<<<<<<<<----------------------
 
 parse(p,varargin{:});
@@ -60,11 +73,11 @@ usepH3 = ~isempty(p.Channelnames.pH3);
 % start the analysis
 
 % get all different conditions
-t_groups = unique(t_SingleCelldata(:,unique([{'Barcode', 'CellLine'} p.ConditionKeys])));
+t_groups = unique(t_SingleCelldata(:,unique([{'Barcode', 'CellLine'} p.ConditionKeys],'stable')));
 
 % start the result report
 t_results = [t_SingleCelldata(:,unique([{'Barcode', 'CellLine'} p.ConditionKeys ...
-    {'pert_type' 'Well'}])) ...
+    {'pert_type' 'Well'}],'stable')) ...
     array2table(NaN(height(t_SingleCelldata),2), 'variablenames', ...
     {'LiveCells' 'DeadCells'}) ...
     array2table(false(height(t_SingleCelldata),2),'variablenames', ...
@@ -162,8 +175,8 @@ for iGr = 1:height(t_groups)
         allLiveIdx{NegCtrlidx(iW)} = find(LiveIdx);
         t_results(NegCtrlidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check consistency and report outcome
-        PassFracDead = DeadCells/length(LDRtxt) < .1;
-        PassDeadConsist = abs(DeadCells/length(LDRtxt) - RefFracDead) < .02;
+        PassFracDead = DeadCells/length(LDRtxt) < p.TestCutoffs.FracDead;
+        PassDeadConsist = abs(DeadCells/length(LDRtxt) - RefFracDead) < p.TestCutoffs.DeadConsist;
         
         t_results(NegCtrlidx(iW), {'PassFracDead' 'PassDeadConsist'}) = ...
             {PassFracDead PassDeadConsist};
@@ -189,12 +202,12 @@ for iGr = 1:height(t_groups)
             % store the results
             allCellIdentity{NegCtrlidx(iW)} = NaN(length(DNA),1);
             allCellIdentity{NegCtrlidx(iW)}(allLiveIdx{NegCtrlidx(iW)}) = CellIdentity;
-            t_results(NegCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac CCPks};
+            t_results(NegCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
-            PassUnclass = mean(CellIdentity==0) < .05;
-            PassCCphase = all(CCfrac(1:3)>.05) & CCfrac(end-1) > .01;
-            PassCCConsist = max(abs(CCfrac - RefCCfrac)) < .05;
-            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < log10(1.2);
+            PassUnclass = mean(CellIdentity==0) < p.TestCutoffs.Unclass;
+            PassCCphase = all(CCfrac(1:3)>.05) & CCfrac(end-1) > p.TestCutoffs.CCphase;
+            PassCCConsist = max(abs(CCfrac - RefCCfrac)) < p.TestCutoffs.CCConsist;
+            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
             t_results(NegCtrlidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassCCConsist' 'PassPksConsist'}) = ...
@@ -254,15 +267,15 @@ for iGr = 1:height(t_groups)
             PassUnclass = mean(CellIdentity==0) < .05;
             switch t_SingleCelldata.pert_type(PosCtrlidx(iW))
                 case ctl_G1
-                    PassCCphase = CCfrac(1) > (RefCCfrac(1)*1.3+.1);
+                    PassCCphase = CCfrac(1) > p.TestCutoffs.CCphase_pos(RefCCfrac(1));
                 case ctl_S
-                    PassCCphase = CCfrac(2) > (RefCCfrac(2)*1.3+.1);
+                    PassCCphase = CCfrac(2) > p.TestCutoffs.CCphase_pos(RefCCfrac(2));
                 case ctl_G2
-                    PassCCphase = CCfrac(3) > (RefCCfrac(3)*1.3+.1);
+                    PassCCphase = CCfrac(3) > p.TestCutoffs.CCphase_pos(RefCCfrac(3));
                 otherwise
                     PassCCphase = true;  % <<<<<<<<<<<<------------ need to check
             end
-            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < log10(1.2);
+            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
             t_results(PosCtrlidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassPksConsist'}) = ...
@@ -278,11 +291,11 @@ for iGr = 1:height(t_groups)
         idx = find(eqtable(t_Posctrl(iP,:), t_SingleCelldata));
         FracDead = t_results.DeadCells(idx)./ ...
             (t_results.DeadCells(idx) + t_results.LiveCells(idx));
-        t_results.PassDeadConsist(idx) = abs(FracDead - mean(FracDead)) < .02;
+        t_results.PassDeadConsist(idx) = abs(FracDead - mean(FracDead)) < p.TestCutoffs.DeadConsist;
         
         CCfrac = t_results.CCfrac(idx,:);
         t_results.PassCCConsist(idx) = max(abs(CCfrac - ...
-            repmat(mean(CCfrac,1),length(idx),1)),[],2) < .05;
+            repmat(mean(CCfrac,1),length(idx),1)),[],2) < 2*p.TestCutoffs.CCConsist;
     end
     
     
@@ -332,11 +345,11 @@ for iGr = 1:height(t_groups)
             % store the results
             allCellIdentity{Trtidx(iW)} = NaN(length(DNA),1);
             allCellIdentity{Trtidx(iW)}(allLiveIdx{Trtidx(iW)}) = CellIdentity;
-            t_results(Trtidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac CCPks};
+            t_results(Trtidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
-            PassUnclass = mean(CellIdentity==0) < .05;
+            PassUnclass = mean(CellIdentity==0) < p.TestCutoffs.Unclass;
             PassCCphase = true;  
-            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < log10(1.2);
+            PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
             t_results(Trtidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassPksConsist'}) = ...
@@ -352,13 +365,20 @@ for iGr = 1:height(t_groups)
         idx = find(eqtable(t_trt(iP,:), t_SingleCelldata));
         FracDead = t_results.DeadCells(idx)./ ...
             (t_results.DeadCells(idx) + t_results.LiveCells(idx));
-        t_results.PassDeadConsist(idx) = abs(FracDead - nanmean(FracDead)) < .02;
+        t_results.PassDeadConsist(idx) = abs(FracDead - nanmean(FracDead)) < p.TestCutoffs.DeadConsist;
         
         CCfrac = t_results.CCfrac(idx,:);
         t_results.PassCCConsist(idx) = max(abs(CCfrac - ...
-            repmat(nanmean(CCfrac,1),length(idx),1)),[],2) < .05;
+            repmat(nanmean(CCfrac,1),length(idx),1)),[],2) < 2*p.TestCutoffs.CCConsist;
     end
     
     fprintf('\tdone\n')
 end
+
+
+%%
+t_summary = collapse(t_results, @mean, ...
+    'keyvars', unique([{'Barcode', 'CellLine'} p.ConditionKeys 'pert_type'],'stable'), ...
+    'valvars', intersect(varnames(t_results), {'PassFracDead' 'PassDeadConsist' 'PassUnclass' ...
+    'PassCCphase' 'PassPksConsist' 'PassCCConsist'}, 'stable'));
 

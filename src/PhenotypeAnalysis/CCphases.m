@@ -56,15 +56,19 @@ if ~isempty(p.savefigure), p.plotting = true; end
 
 
 % determine the spread of the EdU data to calibrate cutoffs
-e = -200:1e3;
+e = -200:2e3;
 f = ksdensity(EdU, e);
 [~,pk,wdth]=findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
 pk = e(ceil(pk));
 
-f2 = ksdensity(EdU(EdU>pk+30), e);
-[~,m]=findpeaks(-f2,'npeaks',1,'widthreference','halfprom','sortstr','descend');
-m = e(ceil(m));
-m = max([m; pk+3*wdth]);
+if any(EdU>pk+30)
+    f2 = ksdensity(EdU(EdU>pk+30), e);
+    [~,m]=findpeaks(-f2,'npeaks',1,'widthreference','halfprom','sortstr','descend');
+    m = e(ceil(m));
+    m = max([m; pk+3*wdth]);
+else
+    m = pk+3*wdth;
+end
 
 offsetEdU = max(pk-1.5*wdth,1);
 
@@ -176,7 +180,7 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
     
     % find the G1 peak now
     temp = PksCandidates(PksCandidates(:,1)<PhasesCandidates(2,1)+log10(2)/5 & ...
-        PksCandidates(:,1)>PhasesCandidates(2,1)-log10(2) & ...
+        PksCandidates(:,1)>PhasesCandidates(2,1)-2.5*log10(2) & ...
         PksCandidates(:,2)<PhasesCandidates(2,2)-EdUshift, [1 2]);
     if ~isempty(temp) % there is a likely G1 peak
         % assign the G1 peak as the one closest to the S peak on the DNA axis
@@ -254,10 +258,14 @@ if length(DNAPks)>1
     end
 end
 
+if isempty(DNAPks)
+    % missing G1 peak -> get something by default
+    DNAPks = nanmin(PhasesCandidates(:,1))-log10(1.2);
+end
 if p.plotting, plot(DNAPks, .1, 'xk'); end
 
 
-%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%
 % now working with EdU
 f = ksdensity(logEdU,p.xEdU);
 if p.plotting
@@ -335,7 +343,7 @@ if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
 EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
 
-%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%
 % working with DNA again to find the G2
 
 hD = logDNA>DNAPks(1)+.4*log10(2) & logEdU<EdUGates(1);
@@ -369,8 +377,12 @@ if any(hD)
             hDNAPks = hDNAPks(argmin(abs(hDNAPks-DNAPks(1)-log10(2))));
         end
     end
-    
-    DNAPks = [DNAPks hDNAPks];
+    if isempty(hDNAPks)
+        % no good candidate for G2; set by default
+        DNAPks = [DNAPks DNAPks(1)+log10(2)];
+    else
+        DNAPks = [DNAPks hDNAPks];
+    end
     
     % find the split between G1 and G2
     f = ksdensity(logDNA,p.xDNA);
@@ -420,7 +432,7 @@ if ~isempty(p.EdUGates)
     EdUGates = p.EdUGates;
 end
 
-% get the fraction of cells in each phase
+%% get the fraction of cells in each phase
 [CCfrac, CCpeaks, CellIdentity] = EvalCC();
 
 if p.plotting
@@ -587,7 +599,7 @@ end
         end
         
         for iG=1:3
-            if any(cellID==iG)
+            if sum(cellID==iG)>10
                 [~, pkidx] = findpeaks(smooth( ksdensity(logDNA(cellID==iG),p.xDNA), ...
                     3*p.nsmooth), 'sortstr','descend', 'Npeaks', 1);
                 DNAPks(iG) = p.xDNA(pkidx);

@@ -60,8 +60,7 @@ parse(p,varargin{:});
 p = p.Results;
 
 % default to save the results as images; empty if not saving
-p.savefolder = p.savefolder;
-if ~isempty(p.savefolder), mkdir(p.savefolder); end
+if ~isempty(p.savefolder) && ~exist(p.savefolder,'dir'), mkdir(p.savefolder); end
 %%%   option to save only if a test fails ?? <<<<<<<<<<<<<<<----------------------
 
 
@@ -105,7 +104,7 @@ for iGr = 1:height(t_groups)
     
     % folder for storing data
     if ~isempty(p.savefolder)
-        grp_savefolder = [p.savefolder ...
+        grp_savefolder = [p.savefolder '/' ...
             strjoin(table2cellstr(t_groups(iGr,:),0),'_') '/'];
         mkdir(grp_savefolder)
     else
@@ -262,16 +261,20 @@ for iGr = 1:height(t_groups)
             % store the results
             allCellIdentity{PosCtrlidx(iW)} = NaN(length(DNA),1);
             allCellIdentity{PosCtrlidx(iW)}(allLiveIdx{PosCtrlidx(iW)}) = CellIdentity;
-            t_results(PosCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac CCPks};
+            t_results(PosCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
             PassUnclass = mean(CellIdentity==0) < .05;
             switch t_SingleCelldata.pert_type(PosCtrlidx(iW))
-                case ctl_G1
+                case 'ctl_G1'
                     PassCCphase = CCfrac(1) > p.TestCutoffs.CCphase_pos(RefCCfrac(1));
-                case ctl_S
+                case 'ctl_S'
                     PassCCphase = CCfrac(2) > p.TestCutoffs.CCphase_pos(RefCCfrac(2));
-                case ctl_G2
-                    PassCCphase = CCfrac(3) > p.TestCutoffs.CCphase_pos(RefCCfrac(3));
+                case 'ctl_G2'
+                    PassCCphase = CCfrac(3) > p.TestCutoffs.CCphase_pos(RefCCfrac(3));                    
+                case 'ctl_M'
+                    if usepH3
+                        PassCCphase = CCfrac(4) > p.TestCutoffs.CCphase_pos(RefCCfrac(4));
+                    else, PassCCphase = true;  end
                 otherwise
                     PassCCphase = true;  % <<<<<<<<<<<<------------ need to check
             end

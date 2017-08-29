@@ -177,9 +177,12 @@ if useDNA
                 hDNAPks = hDNAPks(argmin(abs(hDNAPks-DNAPks(1)-log10(2))));
             end
         end
-        
-        DNAPks = [DNAPks hDNAPks];
-        
+        if ~isempty(hDNAPks)
+            DNAPks = [DNAPks hDNAPks];
+        else
+            % default value (2-fold)
+            DNAPks = [DNAPks DNAPks(1)+log10(2)];
+        end
     else
         % no cells found in G2 phase
         % default value (2-fold)

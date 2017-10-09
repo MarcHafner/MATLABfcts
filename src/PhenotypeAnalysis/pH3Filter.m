@@ -32,7 +32,7 @@ addParameter(p, 'plotting', false, @islogical)
 addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xpH3', 2.5:.02:8, @isvector)
 addParameter(p, 'pH3lims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
-addParameter(p, 'pH3cutoff', [], @isscalar)
+addParameter(p, 'pH3cutoff', [], @(x) isscalar(x) || isempty(x))
 % addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
 addParameter(p, 'savefigure', '', @ischar)
 
@@ -58,8 +58,9 @@ else
     % determine the spread of the pH3 data to define cutoff
     [~, pk, pH3wdth] = findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
     
-    [~, minpk] = findpeaks(-f(pk:end),'npeaks',1); minpk=minpk+pk-1;
-    pH3cutoff = p.xpH3(ceil(max(min(minpk, pk+6*pH3wdth), pk+2*pH3wdth)));
+    [~, minpk] = findpeaks(-f(pk:end),'npeaks',1);
+    minpk=minpk+pk-1;
+    pH3cutoff = p.xpH3(ceil(max(min(minpk, pk+9*pH3wdth), pk+2*pH3wdth)));
 end
 
 if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else

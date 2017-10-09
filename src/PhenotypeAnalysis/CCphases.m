@@ -282,8 +282,11 @@ if p.plotting, plot(p.xEdU, f, '--'), end
 
 [~, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend');
 % take the highest peak
-EdUPks = p.xEdU(idx(1));
-
+if ~isempty(idx)
+    EdUPks = p.xEdU(idx(1));
+else
+    EdUPks = median(logEdU(lE));
+end
 %
 % get the peak with high EdU values (S)
 hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUPks+EdUshift*.8;

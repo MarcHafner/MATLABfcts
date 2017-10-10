@@ -40,7 +40,7 @@ addParameter(p, 'plotting', false, @islogical)
 addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xDNA', 2.5:.02:8, @isvector)
 addParameter(p, 'xEdU', -.2:.02:5.3, @isvector)
-addParameter(p, 'nsmooth', 5, @isnumeric)
+addParameter(p, 'nsmooth', 4, @isnumeric)
 addParameter(p, 'CCseeds', [], @(x) ismatrix(x) && all(size(x)==[3 2]))
 addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & all(size(x)==[3 2]) & all(~isnan(x(:))))
 addParameter(p, 'EdUGates', [], @(x) isvector(x) & length(x)==2 & all(~isnan(x(:))))
@@ -55,7 +55,7 @@ if p.interactive, p.plotting = true; end
 if ~isempty(p.savefigure), p.plotting = true; end
 
 
-% determine the spread of the EdU data to calibrate cutoffs
+%% determine the spread of the EdU data to calibrate cutoffs
 e = -200:2e3;
 f = ksdensity(EdU, e);
 [~,pk,wdth]=findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
@@ -156,9 +156,27 @@ Pk2D = imregionalmax(F);
 
 % store candidate peaks
 PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
-PksCandidates = sortrows(...
+PksCandidates = flipud(sortrows(...
     PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:), 3); % filter out the small peaks and one with EdU=0
+    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:),3)); 
+% filter out the small peaks and one with EdU=0; sort descending
+
+% less smoothing if only one peak found
+if size(PksCandidates,1)<2
+    G = smooth1D(H,p.nsmooth/2.5);
+    F = smooth1D(G',p.nsmooth/2.5)';
+
+    % finding peaks
+    Pk2D = imregionalmax(F);
+    [x,y] = find(Pk2D);
+    
+    % store candidate peaks
+    PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
+    PksCandidates = flipud(sortrows(...
+        PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
+        PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:), 3));
+    % filter out the small peaks and one with EdU=0; sort descending
+end
 
 if p.plotting
     % plotting the results
@@ -166,6 +184,8 @@ if p.plotting
     imagesc(xDNA2, xEdU2, F)
     scatter(PksCandidates(:,1), PksCandidates(:,2), 20+sqrt(PksCandidates(:,3))*100, 'ok')
     set(gca,'ydir','normal')
+    xlim(quantile(xDNA2,[.25 .75]))
+    ylim(quantile(xEdU2,[.1 .75]))
 end
 
 PhasesCandidates = NaN(3,2);
@@ -195,12 +215,24 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
     
 else
     % most likely no S peak
-    % -> take the two highest peak and assign as G1 and G2
+    % -> take the two highest peak and assign as G1 and G2 based on DNA
     if ~isempty(PksCandidates)
-        PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
-        if size(PksCandidates,1)>1 && any((PksCandidates(:,1)-PksCandidates(1,1))>.5*log10(2))
-            PhasesCandidates(3,:) = PksCandidates(1+find( ...
-                (PksCandidates(2:end,1)-PksCandidates(1,1))>.5*log10(2), 1, 'first'),[1 2]);
+        if size(PksCandidates,1)==1
+            % if only one peak, just assign it to G1
+            PhasesCandidates(1,:) = PksCandidates(1,[1 2]);
+        else
+            % if 2 peaks, take the top ones that are enough apart
+            Pksdist = (dist([PksCandidates(:,1) zeros(size(PksCandidates,1),1)]')>.6*log10(2)).* ...
+                (repmat(PksCandidates(:,3),1,size(PksCandidates,1))+ ...
+                repmat(PksCandidates(:,3)',size(PksCandidates,1),1));
+            [PksIdx1, PksIdx2] = find(Pksdist==max(Pksdist(:)),1,'first');
+            if PksCandidates(PksIdx1,1)>PksCandidates(PksIdx2,1)
+                PhasesCandidates(1,:) = PksCandidates(PksIdx2,[1 2]);
+                PhasesCandidates(3,:) = PksCandidates(PksIdx1,[1 2]);
+            else
+                PhasesCandidates(1,:) = PksCandidates(PksIdx1,[1 2]);
+                PhasesCandidates(3,:) = PksCandidates(PksIdx2,[1 2]);
+            end
         end
     end
 end
@@ -214,6 +246,9 @@ if p.plotting
             'horizontalalign','center')
     end
 end
+
+PksCandidates
+PhasesCandidates
 
 EvaluatedPhasesCandidates = PhasesCandidates;
 
@@ -517,6 +552,7 @@ if p.plotting
 %     figure(currfig)
 end
 
+disp(1)
 
 
 %%

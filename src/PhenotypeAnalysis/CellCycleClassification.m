@@ -168,7 +168,8 @@ for iGr = 1:height(t_groups)
                 'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_LDR.jpg'];
         end
         [LiveCells, DeadCells, ~, LiveIdx] = DeadCellFilter(LDRtxt, DNA, ...
-            'Gates', RefDeadGates, 'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
+            ... removing reference gates for cases when DNA distribution changes 
+            'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         % store the results
         allLiveIdx{NegCtrlidx(iW)} = find(LiveIdx);
@@ -231,7 +232,8 @@ for iGr = 1:height(t_groups)
                 'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_LDR.jpg'];
         end
         [LiveCells, DeadCells, ~, LiveIdx] = DeadCellFilter(LDRtxt, DNA, ...
-            'Gates', RefDeadGates, 'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
+            ... removing reference gates for cases when DNA distribution changes 
+            'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         % store the results
         allLiveIdx{PosCtrlidx(iW)} = find(LiveIdx);
@@ -319,7 +321,8 @@ for iGr = 1:height(t_groups)
                 'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_LDR.jpg'];
         end
         [LiveCells, DeadCells, ~, LiveIdx] = DeadCellFilter(LDRtxt, DNA, ...
-            'Gates', RefDeadGates, 'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
+            ... removing reference gates for cases when DNA distribution changes 
+            'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         % store the results
         allLiveIdx{Trtidx(iW)} = find(LiveIdx);

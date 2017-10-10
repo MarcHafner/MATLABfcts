@@ -132,7 +132,7 @@ if useDNA
     
     [pks, idx] = findpeaks(f2s, 'sortstr', 'descend');
     idx = idx(pks>max(pks/10)); % remove lesser peaks
-    DNAPks = p.xDNA(idx(1:min(3,length(idx)))); % take the 3 highest peaks with low EdU
+    DNAPks = p.xDNA(idx(1:min(2,length(idx)))); % take the 2 highest peaks with low EdU
     
     % find the DNA peak for G1
     if length(DNAPks)>1
@@ -144,8 +144,8 @@ if useDNA
             % input matching S peak
             DNAPks = max(DNAPks(DNAPks<p.DNApks(2)));
         else
-            % take the highest peak (most likely case in doubt)
-            DNAPks = DNAPks(1);
+            % take the peak with lowest DNA (most likely case in doubt)
+            DNAPks = min(DNAPks);
         end
     end
     

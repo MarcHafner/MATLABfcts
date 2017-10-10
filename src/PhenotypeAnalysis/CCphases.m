@@ -4,7 +4,7 @@ function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNA
 % inputs are :
 %  DNA  -> Hoechst intensity values
 %  EdU  -> EdU intensity values
-%  
+%
 % optional inputs are:
 %  plotting     -> generates plots
 %  interactive  -> prompt user to validate gating
@@ -40,7 +40,7 @@ addParameter(p, 'plotting', false, @islogical)
 addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xDNA', 2.5:.02:8, @isvector)
 addParameter(p, 'xEdU', -.2:.02:5.3, @isvector)
-addParameter(p, 'nsmooth', 4, @isnumeric)
+addParameter(p, 'nsmooth', 5, @isnumeric)
 addParameter(p, 'CCseeds', [], @(x) ismatrix(x) && all(size(x)==[3 2]))
 addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & all(size(x)==[3 2]) & all(~isnan(x(:))))
 addParameter(p, 'EdUGates', [], @(x) isvector(x) & length(x)==2 & all(~isnan(x(:))))
@@ -86,7 +86,7 @@ EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
 
 %
 if p.plotting
-%     currfig = gcf;
+    %     currfig = gcf;
     
     get_newfigure(45654,[5 285 550 600])
     % define positions
@@ -136,8 +136,8 @@ end
 
 
 % coarser binning
-xDNA2 = p.xDNA(1:2:end);
-xEdU2 = p.xEdU(1:2:end);
+xDNA2 = p.xDNA;
+xEdU2 = p.xEdU;
 nbins = [length(xDNA2) length(xEdU2)]-1;
 bin = NaN(length(logDNA),2);
 [~,bin(:,2)] = histc(logDNA,xDNA2);
@@ -158,14 +158,14 @@ Pk2D = imregionalmax(F);
 PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
 PksCandidates = flipud(sortrows(...
     PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:),3)); 
+    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:),3));
 % filter out the small peaks and one with EdU=0; sort descending
 
 % less smoothing if only one peak found
 if size(PksCandidates,1)<2
-    G = smooth1D(H,p.nsmooth/2.5);
-    F = smooth1D(G',p.nsmooth/2.5)';
-
+    G = smooth1D(H,p.nsmooth/2);
+    F = smooth1D(G',p.nsmooth/2)';
+    
     % finding peaks
     Pk2D = imregionalmax(F);
     [x,y] = find(Pk2D);
@@ -547,10 +547,8 @@ if p.plotting
         saveas(gcf,p.savefigure)
     end
     
-%     figure(currfig)
+    %     figure(currfig)
 end
-
-disp(1)
 
 
 %%

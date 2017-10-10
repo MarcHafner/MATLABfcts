@@ -247,9 +247,6 @@ if p.plotting
     end
 end
 
-PksCandidates
-PhasesCandidates
-
 EvaluatedPhasesCandidates = PhasesCandidates;
 
 if ~isempty(p.CCseeds)
@@ -327,10 +324,10 @@ end
 hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUPks+EdUshift*.8;
 if any(hE)
     % found some cells likely in S phase
-    f = ksdensity(logEdU(hE),p.xEdU);
-    if p.plotting, plot(p.xEdU, f, ':'), end
+    fhE = ksdensity(logEdU(hE),p.xEdU);
+    if p.plotting, plot(p.xEdU, fhE, ':'), end
     
-    [pks, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend');
+    [pks, idx] = findpeaks(smooth(fhE,p.nsmooth),'sortstr','descend');
     hEdUPks = idx(pks>max(pks/10)); % remove lesser peaks
     
     if any(p.xEdU(hEdUPks)>(EdUPks+EdUshift))
@@ -342,8 +339,9 @@ if any(hE)
         EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
     end
     
-    % cut off is set half way between the peaks
-    EdUcutoff = mean(EdUPks([1 2]));
+    % use the distribution to find the minimum of EdU as cutoff (between peaks)
+    EdUcutoff = p.xEdU(argmin(smooth(f',p.nsmooth)' + ...
+        (p.xEdU<EdUPks(1) | p.xEdU>EdUPks(2))));
     EdUlims = [p.xEdU(3) min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
     
     if p.plotting

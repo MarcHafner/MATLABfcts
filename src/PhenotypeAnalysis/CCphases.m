@@ -58,13 +58,15 @@ if ~isempty(p.savefigure), p.plotting = true; end
 %% determine the spread of the EdU data to calibrate cutoffs
 e = -200:2e3;
 f = ksdensity(EdU, e);
-[~,pk,wdth]=findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
-pk = e(ceil(pk));
+% find the EdU peak for G1/G2
+[~,pk,wdth]=findpeaks(f,'npeaks',2,'widthreference','halfprom','sortstr','descend');
+wdth = wdth(argmin(pk));
+pk = e(ceil(min(pk)));
 
 if any(EdU>pk+30)
     f2 = ksdensity(EdU(EdU>pk+30), e);
-    [~,m]=findpeaks(-f2,'npeaks',1,'widthreference','halfprom','sortstr','descend');
-    m = e(ceil(m));
+    [~,m]=findpeaks(-f2,'npeaks',2,'widthreference','halfprom','sortstr','descend');
+    m = e(ceil(m(argmin(abs(m-500)))));
     m = max([m; pk+3*wdth]);
 else
     m = pk+3*wdth;
@@ -111,11 +113,11 @@ if p.plotting
     plot(EdU(idx), logEdU(idx),'.c')
     hold on
     plot(e, max(p.xEdU)*f/max(f), 'k-')
-    plot(e, max(p.xEdU)*f2/max(f2), 'k-')
+    plot(e, max(p.xEdU)*f2/max(f2), 'k--')
     plot([-200 300 NaN -100 500 ], ...
         [minEdU*[1 1] NaN EdUshift*[1 1]+log10(max(pk-offsetEdU,1)) ], '-r')
-    plot(offsetEdU*[1 1], [0 5], '-r')
-    plot([-100 m m], [maxEdU*[1 1] 0], '-r')
+    plot(offsetEdU*[1 1], [0 5], ':r')
+    plot([-100 m m], [maxEdU*[1 1] 0], '--r')
     ylim(p.xEdU([1 end]))
     xlim([-200 max(pk+5*wdth, 500)])
     
@@ -158,7 +160,7 @@ Pk2D = imregionalmax(F);
 PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
 PksCandidates = flipud(sortrows(...
     PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:),3));
+    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/20),:),3));
 % filter out the small peaks and one with EdU=0; sort descending
 
 % less smoothing if only one peak found
@@ -174,7 +176,7 @@ if size(PksCandidates,1)<2
     PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
     PksCandidates = flipud(sortrows(...
         PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-        PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/100),:), 3));
+        PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/20),:), 3));
     % filter out the small peaks and one with EdU=0; sort descending
 end
 
@@ -204,7 +206,7 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
         PksCandidates(:,2)<PhasesCandidates(2,2)-EdUshift, [1 2]);
     if ~isempty(temp) % there is a likely G1 peak
         % assign the G1 peak as the one closest to the S peak on the DNA axis
-        PhasesCandidates(1,:) = temp(argmin(temp(:,1)),:);
+        PhasesCandidates(1,:) = temp(argmin(PhasesCandidates(2,1)-temp(:,1)),:);
     end
     % assign the G2 peak as the one closest to the S peak on the DNA axis
     temp = PksCandidates(PksCandidates(:,1)>nanmean(PhasesCandidates(1:2,1)) & ...
@@ -324,10 +326,10 @@ end
 hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUPks+EdUshift*.8;
 if any(hE)
     % found some cells likely in S phase
-    fhE = ksdensity(logEdU(hE),p.xEdU);
-    if p.plotting, plot(p.xEdU, fhE, ':'), end
+    f = ksdensity(logEdU(hE),p.xEdU);
+    if p.plotting, plot(p.xEdU, f, ':'), end
     
-    [pks, idx] = findpeaks(smooth(fhE,p.nsmooth),'sortstr','descend');
+    [pks, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend');
     hEdUPks = idx(pks>max(pks/10)); % remove lesser peaks
     
     if any(p.xEdU(hEdUPks)>(EdUPks+EdUshift))
@@ -340,6 +342,7 @@ if any(hE)
     end
     
     % use the distribution to find the minimum of EdU as cutoff (between peaks)
+    f = ksdensity(logEdU,p.xEdU);
     EdUcutoff = p.xEdU(argmin(smooth(f',p.nsmooth)' + ...
         (p.xEdU<EdUPks(1) | p.xEdU>EdUPks(2))));
     EdUlims = [p.xEdU(3) min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
@@ -353,15 +356,20 @@ if any(hE)
     % get back to the DNA to find the S location
     hE = (logDNA>DNAPks-log10(2)/2) & (logDNA<DNAPks+log10(2)*1.5) & logEdU>EdUcutoff;
     % get the distribution of cells in S phase
-    f = ksdensity(logDNA(hE),p.xDNA);
-    
-    if p.plotting
-        set(gcf,'currentaxes',ax(3))
-        plot(p.xDNA, f, '-.')
+    if any(hE)
+        f = ksdensity(logDNA(hE),p.xDNA);
+        
+        if p.plotting
+            set(gcf,'currentaxes',ax(3))
+            plot(p.xDNA, f, '-.')
+        end
+        
+        [~, idx] = findpeaks(smooth(f,3*p.nsmooth),'sortstr','descend', 'Npeaks', 1);
+        DNAPks = [DNAPks p.xDNA(idx)];
+    else
+        % set a default value
+        DNAPks = [DNAPks DNAPks+.5*log10(2)];
     end
-    
-    [~, idx] = findpeaks(smooth(f,3*p.nsmooth),'sortstr','descend', 'Npeaks', 1);
-    DNAPks = [DNAPks p.xDNA(idx)];
     
 else
     % no cells found in S phase

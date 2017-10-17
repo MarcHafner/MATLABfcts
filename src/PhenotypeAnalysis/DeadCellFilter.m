@@ -71,7 +71,7 @@ else
     [~, pk, LDRwdth] = findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
     
     [~, minpk] = findpeaks(-f(pk:end),'npeaks',1); minpk=minpk+pk-1;
-    LDRcutoff = p.xLDR(ceil(max(min(minpk, pk+5*LDRwdth), pk+2.5*LDRwdth)));
+    LDRcutoff = p.xLDR(min(length(p.xLDR)-2,ceil(max([3, min(minpk, pk+5*LDRwdth), pk+2.5*LDRwdth]))));
     Gates = [-Inf LDRcutoff];
 end
 

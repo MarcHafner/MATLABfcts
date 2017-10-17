@@ -36,7 +36,7 @@ addParameter(p, 'Channelnames', ...
     'pH3', 'NucleiSelected_PH3INT'), ...
     @(x) isstruct(x) && isfield(x,'LDR') && isfield(x,'DNA'))
 % default to save the results as images; empty if not saving
-addParameter(p, 'savefolder', 'temp/', @ischar)
+addParameter(p, 'savefolder', '', @ischar)
 % additional keys to consider for ananlyzing the results
 addParameter(p, 'ConditionKeys', {}, @cellstr)
 % flags for the type of treatments

@@ -56,7 +56,7 @@ if ~isempty(p.savefigure), p.plotting = true; end
 
 
 %% determine the spread of the EdU data to calibrate cutoffs
-e = -200:2e3;
+e = -200:4e3;
 f = ksdensity(EdU, e);
 % find the EdU peak for G1/G2
 [~,pk,wdth]=findpeaks(f,'npeaks',2,'widthreference','halfprom','sortstr','descend');

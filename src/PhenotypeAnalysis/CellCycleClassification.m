@@ -54,10 +54,12 @@ addParameter(p, 'TestCutoffs', ...
     'PksConsist', log10(1.2)), ...
     @(x) isstruct(x) && all(isfield(x, {'FracDead', 'DeadConsist', 'Unclass', ...
     'CCphase', 'CCphase_pos', 'CCConsist', 'PksConsist'})))
+addParameter(p, 'CellFrac_Adpative_pH3cutoff', 1/3, @(x) isscalar(x) || isempty(x))
 addParameter(p, 'interactive', false, @islogical) %%%   option ?? <<<<<<<<<<<<<<<----------------------
 
 parse(p,varargin{:});
 p = p.Results;
+if isempty(p.CellFrac_Adpative_pH3cutoff), p.CellFrac_Adpative_pH3cutoff = -1; end
 
 % default to save the results as images; empty if not saving
 if ~isempty(p.savefolder) && ~exist(p.savefolder,'dir'), mkdir(p.savefolder); end
@@ -140,6 +142,7 @@ for iGr = 1:height(t_groups)
     [~, RefFracDead, ~, LiveIdx] = DeadCellFilter(LDRtxt, DNA, ...
         'savefig', savefig, 'LDRlims', LDRlims, 'DNAlims', DNAlims);
     RefFracDead = RefFracDead/length(LDRtxt);
+    meanNcells = sum(LiveIdx)/length(NegCtrlidx);
     if useEdU
         EdU = vertcat(SingleCelldata(NegCtrlidx).(p.Channelnames.EdU));
         if ~isempty(p.savefolder), savefig = [grp_savefolder 'All_Negctl_EdU.jpg']; end
@@ -255,9 +258,15 @@ for iGr = 1:height(t_groups)
                 if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                         'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_pH3.jpg'];
                 end
+                if sum(LiveIdx)>meanNcells*p.CellFrac_Adpative_pH3cutoff %% check if low cell count
+                    temp_pH3cutoff = RefpH3cutoff;
+                else
+                    temp_pH3cutoff = [];
+                end
                 CCfrac = pH3Filter(pH3(LiveIdx), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
-                    'pH3cutoff', RefpH3cutoff);
+                    'pH3cutoff', temp_pH3cutoff);
+                    
             end
             
             % store the results
@@ -343,9 +352,14 @@ for iGr = 1:height(t_groups)
                 if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                         'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_pH3.jpg'];
                 end
+                if sum(LiveIdx)>meanNcells*p.CellFrac_Adpative_pH3cutoff %% check if low cell count
+                    temp_pH3cutoff = RefpH3cutoff;
+                else
+                    temp_pH3cutoff = [];
+                end
                 CCfrac = pH3Filter(pH3(LiveIdx), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
-                    'pH3cutoff', RefpH3cutoff);
+                    'pH3cutoff', temp_pH3cutoff);
             end
             
             % store the results

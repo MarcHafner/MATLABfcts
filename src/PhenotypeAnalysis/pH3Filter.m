@@ -1,4 +1,4 @@
-function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, varargin)
+function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims, logtxt] = pH3Filter(pH3, CellIdentity, varargin)
 % [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, ...)
 %
 %
@@ -33,7 +33,6 @@ addParameter(p, 'interactive', false, @islogical)
 addParameter(p, 'xpH3', 2.5:.02:8, @isvector)
 addParameter(p, 'pH3lims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 addParameter(p, 'pH3cutoff', [], @(x) isscalar(x) || isempty(x))
-% addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
 addParameter(p, 'savefigure', '', @ischar)
 
 parse(p,varargin{:});
@@ -41,7 +40,6 @@ p = p.Results;
 
 if p.interactive, p.plotting = true; end
 if ~isempty(p.savefigure), p.plotting = true; end
-
 
 %%
 
@@ -54,21 +52,39 @@ f = ksdensity(logpH3(CellIdentity==1 | CellIdentity==3), p.xpH3, 'width', 3*diff
 if ~isempty(p.pH3cutoff)
     % already defined gate
     pH3cutoff = p.pH3cutoff;
-else
-    % determine the spread of the pH3 data to define cutoff
-    [~, pk, pH3wdth] = findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
+    logtxt = 'pH3: used predefined cutoff';
+end
+
+if isempty(p.pH3cutoff) || mean(logpH3>=pH3cutoff)>.1 % if too many M phase cells switch to adaptive mode
+    logtxt = 'pH3: adaptive pH3 cutoff';
+    if ~isempty(p.pH3cutoff), logtxt = [logtxt ' (predefined has too many M-cells)']; end
     
-    [~, minpk] = findpeaks(-f(pk:end),'npeaks',1);
+    % determine the spread of the pH3 data to define cutoff
+    [~, pk, pH3wdth] = findpeaks(f,'npeaks',3, ...
+        'widthreference','halfprom','sortstr','descend');
+    % enforce that no more than 30% of cells are in M-phase
+    minidx = find((cumsum(f)/sum(f))>.3,1,'first');
+    if any(pk>=minidx)
+        pH3wdth = pH3wdth(find(pk>=minidx,1,'first'));
+        pk = pk(find(pk>=minidx,1,'first'));
+    else
+        pk = minidx; pH3wdth = max(pH3wdth);
+    end
+    
+    [~, minpk] = findpeaks(-f(pk:end),'npeaks',1, 'minpeakheight', -.6*max(f));
     minpk=minpk+pk-1;
     pH3cutoff = p.xpH3(ceil(max(min(minpk, pk+9*pH3wdth), pk+2*pH3wdth)));
+    if isempty(pH3cutoff)
+        pH3cutoff = p.xpH3(find(smooth(f,5)>.1/length(pH3),1,'last')+1); end
 end
 
 if ~isempty(p.pH3lims), pH3lims = p.pH3lims; else
-    pH3lims = quantile(logpH3, [5e-3 .995])+[-1 1]*3*diff(p.xpH3(1:2)); end
+    pH3lims = quantile(logpH3, [5e-3 .995])+[-1 10]*3*diff(p.xpH3(1:2)); end
+if max(pH3lims)<pH3cutoff
+    pH3lims(2) = pH3cutoff+.02; end
 
 if p.plotting
     % plotting results
-%     currfig = gcf;
     
     plot_pos = [
     .07 .3 .4 .67;
@@ -76,6 +92,7 @@ if p.plotting
     .6 .08 .3 .5];
 
     get_newfigure(45679,[5 5 550 270])
+    annotation('textbox', [.02 .02 .96 .08], 'string', logtxt)
     
     % plot original data
     get_newaxes(plot_pos(1,:),1)
@@ -88,6 +105,10 @@ if p.plotting
         [0 .5]*log10(max(f)), '-', 'color', [.6 .9 .1]);
     pltgt1 = plot([1 1]*pH3cutoff, ...
         [0 .5]*log10(max(f)), 'r-');
+    if ~isempty(p.pH3cutoff) && p.pH3cutoff~=pH3cutoff
+        plot([1 1]*p.pH3cutoff, ...
+            [0 .5]*log10(max(f)), '-', 'color', [.6 .6 .6]);
+    end
     
     xlim(pH3lims)
     ylim([0 log10(max(f))-log10(max(f)/100)+.1])
@@ -134,7 +155,6 @@ if p.plotting
         saveas(gcf,p.savefigure)
     end
     
-%     figure(currfig)
 end
 %%
     function setCutoff(src, event, x)

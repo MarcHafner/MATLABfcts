@@ -314,10 +314,12 @@ N = histcounts(logEdU(lE),p.xEdU);
 f([true; smooth(N,3)<=1/3]) = 0; % remove single cells
 if p.plotting, plot(p.xEdU, f, '--'), end
 
-[~, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend');
-% take the highest peak
+[EdUint, idx] = findpeaks(smooth(f,p.nsmooth),'sortstr','descend','npeaks',2);
+
 if ~isempty(idx)
-    EdUPks = p.xEdU(idx(1));
+    % take the highest peak or lowest EdU level
+    idx = idx(EdUint>.3*max(EdUint));
+    EdUPks = p.xEdU(idx(argmin(idx)));
 else
     EdUPks = median(logEdU(lE));
 end
@@ -385,7 +387,7 @@ end
 if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
 
-EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
+EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff]
 
 %% %%%%%%%%%%%%%%%%%%%%
 % working with DNA again to find the G2

@@ -1,5 +1,5 @@
-function [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
-% [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
+function [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
+% [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
 %
 %
 % inputs are :
@@ -24,7 +24,9 @@ function [LiveCells, DeadCells, Gates, AliveIdx, LDRlims, DNAlims] = DeadCellFil
 %  LiveCells    -> number of live cells
 %  DeadCells    -> number of dead cells
 %  Gates        -> selected gates
-%  AliveIdx     -> boolean for live cells
+%  CellOutcome  -> -1 for dead (high LDR or extreme DNA)
+%                   0 for out of DNA
+%                   1 for selected (low LDR, normal DNA)
 %  LDRlims      -> selected range for LDR channel
 %  DNAlims      -> selected range for DNA channel
 %
@@ -229,7 +231,7 @@ if useDNA
 end
 
 % finalize the results
-[LiveCells, DeadCells, AliveIdx] = EvalAliveIdx();
+[LiveCells, DeadCells, CellOutcome] = EvalAliveIdx();
 
 
 
@@ -303,11 +305,11 @@ end
         end
         
         % re-evluate assignments
-        [LiveCells, DeadCells, AliveIdx] = EvalAliveIdx();
+        [LiveCells, DeadCells, CellOutcome] = EvalAliveIdx();
     end
 
-    function [alive, dead, idx] = EvalAliveIdx()
-        idx = LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2);
+    function [alive, dead, outcome] = EvalAliveIdx()
+        outcome = -(LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2));
         if useDNA
             idx = idx & (logDNA>=Gates(2,1) & logDNA<=Gates(2,2));
         end

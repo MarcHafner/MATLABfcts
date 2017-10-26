@@ -64,10 +64,10 @@ if isempty(p.pH3cutoff) || mean(logpH3>=pH3cutoff)>.1 % if too many M phase cell
     [~, pk, pH3wdth] = findpeaks(f,'npeaks',3, ...
         'widthreference','halfprom','sortstr','descend');
     % enforce that no more than 30% of cells are in M-phase
-    minidx = find((cumsum(f)/sum(f))>.3,1,'first');
+    minidx = find((cumsum(f)/sum(f))>.3,1,'first')-5;
     if any(pk>=minidx)
         pH3wdth = pH3wdth(find(pk>=minidx,1,'first'));
-        pk = pk(find(pk>=minidx,1,'first'));
+        pk = max(pk(find(pk>=minidx,1,'first')), find((cumsum(f)/sum(f))>.3,1,'first'));
     else
         pk = minidx; pH3wdth = max(pH3wdth);
     end
@@ -125,7 +125,7 @@ if p.plotting
 end
 
 
-% finalize the results
+%% finalize the results
 EvalMphase();
 
 

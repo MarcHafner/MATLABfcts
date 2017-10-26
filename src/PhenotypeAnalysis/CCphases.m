@@ -42,11 +42,12 @@ addParameter(p, 'xDNA', 2.5:.02:8, @isvector)
 addParameter(p, 'xEdU', -.2:.02:5.3, @isvector)
 addParameter(p, 'nsmooth', 5, @isnumeric)
 addParameter(p, 'CCseeds', [], @(x) ismatrix(x) && all(size(x)==[3 2]))
-addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & all(size(x)==[3 2]) & all(~isnan(x(:))))
+addParameter(p, 'DNAGates', [], @(x) ismatrix(x) & length(x)==4 & all(~isnan(x(:))))
 addParameter(p, 'EdUGates', [], @(x) isvector(x) & length(x)==2 & all(~isnan(x(:))))
 addParameter(p, 'savefigure', '', @ischar)
 addParameter(p, 'EdUlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 addParameter(p, 'DNAlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
+addParameter(p, 'DNAwidth', [], @(x) isscalar(x) || isempty(x))
 
 
 parse(p,varargin{:});
@@ -394,15 +395,15 @@ else
     % set arbitrary value for high S
     EdUPks = [EdUPks (EdUPks+EdUshift) EdUPks];
     EdUcutoff = mean(EdUPks([1 2]));
-    EdUlims = [-.02 min(EdUPks(2)+(EdUPks(2)-EdUcutoff), p.xEdU(end-1))];
+    EdUlims = [-.02 min(EdUPks(2)+(EdUPks(2)-EdUcutoff)+.1, p.xEdU(end-1))];
     
     % set default DNA content (1.4 fold)
     DNAPks = DNAPks+[0 log10(2)*.5];
 end
 if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
-
-EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
+% at least width of 1 for the S phase box
+EdUGates = [EdUcutoff EdUPks(2)+max(EdUPks(2)-EdUcutoff,1)];
 
 %% %%%%%%%%%%%%%%%%%%%%
 % working with DNA again to find the G2
@@ -447,11 +448,14 @@ if any(hD)
     
     % find the split between G1 and G2
     f = ksdensity(logDNA,p.xDNA);
-    [~, idx] = findpeaks(-smooth(f,5));
-    DNAcutoff = mean(p.xDNA(idx(p.xDNA(idx)>DNAPks(1) & p.xDNA(idx)<DNAPks(3))));
-    if isnan(DNAcutoff)
+    [~, idx] = findpeaks(-smooth(f,p.nsmooth), 'sortstr', 'descend');
+    DNAcutoff = p.xDNA(idx(p.xDNA(idx)>DNAPks(1) & p.xDNA(idx)<DNAPks(3)));
+    
+    if isempty(DNAcutoff)
         % no good candidate; set by default
         DNAcutoff = DNAPks(2);
+    elseif length(DNAcutoff)>1
+        DNAcutoff = DNAcutoff(1);
     end
     
 else
@@ -463,7 +467,18 @@ else
     
 end
 
-% define the DNA range and gates
+%% find the cells dropping in S-phase
+
+% G1 width (take only the centered cells to estimate width)
+hG1 = abs(logDNA-DNAPks(1))<.3*log10(2) & logEdU<EdUGates(1);
+NormFitG1 = fitdist(logDNA(hG1), 'Normal');
+G1lim = min(NormFitG1.icdf(.99), DNAcutoff-.1*log10(2));
+
+hG2 = abs(logDNA-DNAPks(3))<.3*log10(2) & logEdU<EdUGates(1);
+NormFit = fitdist(logDNA(hG2), 'Normal');
+G2lim = max(NormFit.icdf(.01), DNAcutoff+.1*log10(2));
+
+%% define the DNA range and gates
 d1 = DNAcutoff-DNAPks(1);
 d2 = DNAPks(3)-DNAcutoff;
 if ~isempty(p.DNAlims), DNAlims = p.DNAlims; else
@@ -474,7 +489,7 @@ if p.plotting
 end
 
 % defines the gates
-DNAGates = [DNAPks(1)-d1 DNAcutoff DNAPks(3)+d2];
+DNAGates = [DNAPks(1)-d1 G1lim G2lim DNAPks(3)+d2];
 
 % compare with input in present
 EvaluatedDNAGates = DNAGates;
@@ -511,16 +526,16 @@ if p.plotting
         end
     end
     % plot the evaluated gates
-    plot(ax(1), 10.^EvaluatedDNAGates([1 1 1 2 2 2 3 3]), ...
-        max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
-    plot(ax(3), EvaluatedDNAGates([1 1 1 2 2 2 3 3]), ...
-        max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
+    plot(ax(1), 10.^EvaluatedDNAGates([1 1 1 2 2 2 3 3 3 4 4]), ...
+        max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
+    plot(ax(3), EvaluatedDNAGates([1 1 1 2 2 2 3 3 3 4 4]), ...
+        max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
     plot(ax(4), EvaluatedEdUGates([1 1 1 2 2]), ...
         max(ylim(ax(4)))*[0 1 NaN 0 1], '--', 'color', [.6 .9 .1])
     for i=5:6
-        plot(ax(i), EvaluatedDNAGates([1 1 3 3 1 1 3 2 2 2]), ...
-            [-1 EvaluatedEdUGates([2 2]) -1 NaN EvaluatedEdUGates([1 1]) ...
-            NaN -1 EvaluatedEdUGates(1)], '--', 'color', [.6 .9 .1], 'linewidth', 2)
+        plot(ax(i), EvaluatedDNAGates([1 1 4 4  1  1 2 2  1  3 3 4]), ...
+            [-1 EvaluatedEdUGates([2 2]) -1 NaN EvaluatedEdUGates([1 1]) -1 ...
+            NaN -1 EvaluatedEdUGates([1 1])], '--', 'color', [.6 .9 .1], 'linewidth', 2)
     end
     
     hgates = [];
@@ -631,15 +646,17 @@ end
             end
         end
         
-        set(hgates(1), 'xdata', 10.^DNAGates([1 1 1 2 2 2 3 3]), ...
-            'ydata', max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1])
-        set(hgates(3), 'xdata', DNAGates([1 1 1 2 2 2 3 3]), ...
-            'ydata', max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1])
+        set(hgates(1), 'xdata', 10.^DNAGates([1 1 1 2 2 2 3 3 3 4 4]), ...
+            'ydata', max(ylim(ax(1)))*[0 1 NaN 0 1 NaN 0 1 NaN 0 1])
+        set(hgates(3), 'xdata', DNAGates([1 1 1 2 2 2 3 3 3 4 4]), ...
+            'ydata', max(ylim(ax(3)))*[0 1 NaN 0 1 NaN 0 1 NaN 0 1])
         set(hgates(4), 'xdata', EdUGates([1 1 1 2 2]), ...
             'ydata', max(ylim(ax(4)))*[0 1 NaN 0 1])
         for iG=5:6
-            set(hgates(iG), 'xdata', DNAGates([1 1 3 3 1 1 3 2 2 2]), ...
-                'ydata', [-1 EdUGates([2 2]) -1 NaN EdUGates([1 1]) NaN -1 EdUGates(1)])
+            set(hgates(iG), 'xdata', DNAGates([1 1 4 4  1  1 2 2  1  3 3 4]), ...
+            'ydata', [-1 EdUGates([2 2]) -1 NaN EdUGates([1 1]) -1 ...
+            NaN -1 EdUGates([1 1])])
+    
         end
         set(gcf,'currentaxes',ax(7))
         cla
@@ -650,9 +667,10 @@ end
 
     function [frac, pks, cellID] = EvalCC()
         
-        cellID = (logDNA>=DNAGates(1) & logDNA<DNAGates(2) & logEdU<EdUGates(1)) ...
-            +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(3) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ...
-            +3*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1));
+        cellID = (logDNA>=DNAGates(1) & logDNA<DNAGates(2) & logEdU<EdUGates(1)) ... % G1
+            +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(3) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ... % S
+            +2*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1)) ... % dropped S
+            +3*(logDNA>=DNAGates(3) & logDNA<DNAGates(4) & logEdU<EdUGates(1)); % G2
         
         for id = 1:4
             frac(id) = mean(cellID==mod(id,4));

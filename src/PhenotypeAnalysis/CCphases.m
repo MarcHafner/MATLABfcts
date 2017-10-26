@@ -157,10 +157,10 @@ Pk2D = imregionalmax(F);
 [x,y] = find(Pk2D);
 
 % store candidate peaks
-PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
+prePksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
 PksCandidates = flipud(sortrows(...
-    PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-    PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/20),:),3));
+    prePksCandidates( (prePksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
+    prePksCandidates(:,3)>1e-5 & prePksCandidates(:,3)>max(prePksCandidates(:,3)/30),:),3));
 % filter out the small peaks and one with EdU=0; sort descending
 
 % less smoothing if only one peak found
@@ -173,10 +173,26 @@ if size(PksCandidates,1)<2
     [x,y] = find(Pk2D);
     
     % store candidate peaks
-    PksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
+    prePksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
     PksCandidates = flipud(sortrows(...
-        PksCandidates( (PksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
-        PksCandidates(:,3)>1e-5 & PksCandidates(:,3)>max(PksCandidates(:,3)/20),:), 3));
+        prePksCandidates( (prePksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
+        prePksCandidates(:,3)>1e-5 & prePksCandidates(:,3)>max(prePksCandidates(:,3)/20),:), 3));
+    % filter out the small peaks and one with EdU=0; sort descending
+    
+elseif size(prePksCandidates,1)>2*size(PksCandidates,1) || size(prePksCandidates,1)>5
+    % if too many peaks discarded -> more smoothing
+    G = smooth1D(H,p.nsmooth*2);
+    F = smooth1D(G',p.nsmooth*2)';
+    
+    % finding peaks
+    Pk2D = imregionalmax(F);
+    [x,y] = find(Pk2D);
+    
+    % store candidate peaks
+    prePksCandidates = [xDNA2(y)' xEdU2(x)' F(Pk2D)];
+    PksCandidates = flipud(sortrows(...
+        prePksCandidates( (prePksCandidates(:,2)>(p.nsmooth+2)*diff(xEdU2([1 2]))) & ...
+        prePksCandidates(:,3)>1e-5 & prePksCandidates(:,3)>max(prePksCandidates(:,3)/60),:), 3));
     % filter out the small peaks and one with EdU=0; sort descending
 end
 
@@ -206,7 +222,7 @@ if any(PksCandidates(:,2)-min(PksCandidates(:,2))>EdUshift & ...
         PksCandidates(:,2)<PhasesCandidates(2,2)-EdUshift, [1 2]);
     if ~isempty(temp) % there is a likely G1 peak
         % assign the G1 peak as the one closest to the S peak on the DNA axis
-        PhasesCandidates(1,:) = temp(argmin(PhasesCandidates(2,1)-temp(:,1)),:);
+        PhasesCandidates(1,:) = temp(argmax(PhasesCandidates(2,1)-temp(:,1)),:);
     end
     % assign the G2 peak as the one closest to the S peak on the DNA axis
     temp = PksCandidates(PksCandidates(:,1)>nanmean(PhasesCandidates(1:2,1)) & ...
@@ -298,7 +314,6 @@ if isempty(DNAPks)
 end
 if p.plotting, plot(DNAPks, .1, 'xk'); end
 
-
 %% %%%%%%%%%%%%%%%%%%%%
 % now working with EdU
 f = ksdensity(logEdU,p.xEdU);
@@ -387,7 +402,7 @@ end
 if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
 
-EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff]
+EdUGates = [EdUcutoff 2*EdUPks(2)-EdUcutoff];
 
 %% %%%%%%%%%%%%%%%%%%%%
 % working with DNA again to find the G2

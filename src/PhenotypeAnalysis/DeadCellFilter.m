@@ -132,7 +132,8 @@ if useDNA
     
     [pks, idx] = findpeaks(f2s, 'sortstr', 'descend');
     idx = idx(pks>max(pks/10)); % remove lesser peaks
-    DNAPks = p.xDNA(idx(1:min(2,length(idx)))); % take the 2 highest peaks with low EdU
+    DNAPks = p.xDNA(idx(1:min(4,length(idx)))); % take the 4 highest peaks 
+    DNAdensity = arrayfun(@(x) mean(logDNA>(x-.2*log10(2)) & logDNA<(x+.8*log10(2))), DNAPks);
     
     % find the DNA peak for G1
     if length(DNAPks)>1
@@ -145,7 +146,7 @@ if useDNA
             DNAPks = max(DNAPks(DNAPks<p.DNApks(2)));
         else
             % take the peak with lowest DNA (most likely case in doubt)
-            DNAPks = min(DNAPks);
+            DNAPks = DNAPks(argmax(DNAdensity));
         end
     end
     
@@ -193,7 +194,7 @@ if useDNA
     
     if any(isnan(p.Gates(2,:)))
         % define areas
-        Gates(2,:) = DNAPks + [-1.2 1.2]*diff(DNAPks);
+        Gates(2,:) = DNAPks + [-.9 1.2]*diff(DNAPks);
     else
         Gates(2,:) = p.Gates(2,:);
     end

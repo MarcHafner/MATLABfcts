@@ -1,4 +1,4 @@
-function [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
+function [LiveCells, DeadCells, LDRGates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
 % [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
 %
 %
@@ -42,7 +42,8 @@ addParameter(p, 'xLDR', -.01:.0002:(max(LDRtxt)+.01), @isvector)
 addParameter(p, 'LDRcutoff', [], @isscalar)
 addParameter(p, 'nsmooth', 5, @isnumeric)
 addParameter(p, 'DNApks', [NaN NaN], @(x) isvector(x) & length(x)==2)
-addParameter(p, 'Gates', NaN(2), @(x) ismatrix(x) & all(size(x)==2) & all(~isnan(x(:,1))))
+addParameter(p, 'LDRGates', NaN(2), @(x) isvector(x) & length(x)==2)
+addParameter(p, 'DNAGates', NaN(4), @(x) isvector(x) & length(x)==4)
 addParameter(p, 'savefigure', '', @ischar)
 addParameter(p, 'LDRlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
 addParameter(p, 'DNAlims', [], @(x) all(size(x)==[1 2]) && x(2)>x(1))
@@ -62,19 +63,19 @@ useDNA = ~isempty(DNA);
 % start with the LDR channel
 f = ksdensity(LDRtxt, p.xLDR, 'width', 2.5*diff(p.xLDR(1:2)));
 
-if ~isnan(p.Gates(1,2))
+if ~isnan(p.LDRGates(2))
     % already defined gate
-    Gates = p.Gates(1,:);
-    if isnan(p.Gates(1,1)), Gates(1,1) = -Inf; end
+    LDRGates = p.LDRGates;
+    if isnan(p.Gates(1)), LDRGates(1) = -Inf; end
 elseif ~isempty(p.LDRcutoff)
-    Gates = [-Inf p.LDRcutoff];
+    LDRGates = [-Inf p.LDRcutoff];
 else
     % determine the spread of the LDRtxt data to define cutoff
     [~, pk, LDRwdth] = findpeaks(f,'npeaks',1,'widthreference','halfprom','sortstr','descend');
     
     [~, minpk] = findpeaks(-f(pk:end),'npeaks',1); minpk=minpk+pk-1;
     LDRcutoff = p.xLDR(min(length(p.xLDR)-2,ceil(max([3, min(minpk, pk+5*LDRwdth), pk+2.5*LDRwdth]))));
-    Gates = [-Inf LDRcutoff];
+    LDRGates = [-Inf LDRcutoff];
 end
 
 if ~isempty(p.LDRlims), LDRlims = p.LDRlims; else
@@ -96,9 +97,9 @@ if p.plotting
     get_newaxes(plot_pos(1,:),1)
     plot(p.xLDR, log10(f+max(f)/100)-log10(max(f)/100))
     
-    plot([Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)], ...
+    plot([LDRGates(2) max(LDRGates(1), min(p.xLDR))*[1 1] [1 1]*LDRGates(2)], ...
         [0 0 .5 .5 0]*log10(max(f)), '-', 'color', [.6 .9 .1]);
-    pltgt1 = plot([Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)], ...
+    pltgt1 = plot([LDRGates(2) max(LDRGates(1), min(p.xLDR))*[1 1] [1 1]*LDRGates(2)], ...
         [0 0 .5 .5 0]*log10(max(f)), 'r-');
     
     xlim(LDRlims)
@@ -129,7 +130,7 @@ if useDNA
     
     
     % take only the cells with low LDR
-    f2s = ksdensity(logDNA(LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2)),p.xDNA);
+    f2s = ksdensity(logDNA(LDRtxt>=LDRGates(1) & LDRtxt<=LDRGates(2)),p.xDNA);
     if p.plotting, plot(p.xDNA, f2s, '--r'), end
     
     [pks, idx] = findpeaks(f2s, 'sortstr', 'descend');
@@ -155,7 +156,7 @@ if useDNA
     
     
     % get the cells in G2 phase
-    hD = logDNA>DNAPks(1)+.4*log10(2) & LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2);
+    hD = logDNA>DNAPks(1)+.4*log10(2) & LDRtxt>=LDRGates(1) & LDRtxt<=LDRGates(2);
     if any(hD)
         % found some cells in G2 phase
         f3 = ksdensity(logDNA(hD),p.xDNA);
@@ -194,17 +195,18 @@ if useDNA
     end
     
     
-    if any(isnan(p.Gates(2,:)))
+    if any(isnan(p.DNAGates))
         % define areas
-        Gates(2,:) = DNAPks + [-.9 1.2]*diff(DNAPks);
+        DNAGates = DNAPks([1 1 2 2]) + [-1.5 -.9 1.2 2.2]*diff(DNAPks);
     else
-        Gates(2,:) = p.Gates(2,:);
+        DNAGates = p.DNAGates;
     end
     
     
     if p.plotting
-        plot(Gates(2,[1 1 2 2]), [0 max(f2)*[1.02 1.02] 0], '--', 'color', [.6 .9 .1]);
-        pltgt2 = plot(Gates(2,[1 1 2 2]), [0 max(f2)*[1.02 1.02] 0], '-r');
+        plot(DNAGates([1 1 2 2]), [0 max(f2)*[1.02 1.02] 0], '--', 'color', [.6 .9 .1]);
+        pltgt2 = plot(DNAGates([1 1 4 4]), [0 max(f2)*[1.02 1.02] 0], '-r');
+        pltgt2b = plot(DNAGates([2 2 3 3]), [0 max(f2)*[1.02 1.02] 0], '-r', 'linewidth', 2);
         phases = {'G1'  'G2'};
         for i=1:2
             text(DNAPks(i), max(f2)*1.1, phases{i}, ...
@@ -217,9 +219,11 @@ if useDNA
         get_newaxes(plot_pos(3,:),1)
         dscatter(logDNA, LDRtxt, 'MSIZE', 15, 'marker', 'o')
         
-        plot(Gates(2,[1 1 2 2 1]), max(Gates(1,[1 2 2 1 1]),0), '--', ...
+        plot(DNAGates([1 1 2 2 1]), max(LDRGates([1 2 2 1 1]),0), '--', ...
             'color', [.6 .9 .1], 'linewidth', 2);
-        pltgt3 = plot(Gates(2,[1 1 2 2 1]), max(Gates(1,[1 2 2 1 1]),0), ...
+        pltgt3 = plot(DNAGates([1 1 4 4 1]), max(LDRGates([1 2 2 1 1]),0), ...
+            '-r');
+        pltgt3b = plot(DNAGates([2 2 3 3 2]), max(LDRGates([1 2 2 1 1]),0), ...
             '-r', 'linewidth', 2);
         plot(DNAPks, [0 0], 'xk')
         plot(DNAPks, [0 0], 'ok', 'markersize', 14)
@@ -241,23 +245,23 @@ if p.interactive
     minLDR = uicontrol('style', 'slider', 'callback', {@setGates,1});
     minLDR.Units = 'normalized';
     minLDR.InnerPosition = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.04 plot_pos(1,3)+30/figpos(3) .03];
-    minLDR.Value = max(0,(Gates(1,1)-LDRlims(1))/diff(LDRlims));
+    minLDR.Value = max(0,(LDRGates(1)-LDRlims(1))/diff(LDRlims));
     
     maxLDR = uicontrol('style', 'slider', 'callback', {@setGates,2});
     maxLDR.Units = 'normalized';
     maxLDR.Position = [plot_pos(1,1)-15/figpos(3) plot_pos(1,2)-.08 plot_pos(1,3)+30/figpos(3) .03];
-    maxLDR.Value = (Gates(1,2)-LDRlims(1))/diff(LDRlims);
+    maxLDR.Value = (LDRGates(2)-LDRlims(1))/diff(LDRlims);
     
     if useDNA
         minDNA = uicontrol('style', 'slider', 'callback', {@setGates,3});
         minDNA.Units = 'normalized';
         minDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.04 plot_pos(2,3)+30/figpos(3) .03];
-        minDNA.Value = (Gates(2,1)-DNAlims(1))/diff(DNAlims);
+        minDNA.Value = (DNAGates(1)-DNAlims(1))/diff(DNAlims);
         
         maxDNA = uicontrol('style', 'slider', 'callback', {@setGates,4});
         maxDNA.Units = 'normalized';
         maxDNA.Position = [plot_pos(2,1)-15/figpos(3) plot_pos(2,2)-.08 plot_pos(2,3)+30/figpos(3) .03];
-        maxDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
+        maxDNA.Value = (DNAGates(2)-DNAlims(1))/diff(DNAlims);
     end
     
     approve = uicontrol('style', 'pushbutton');
@@ -281,27 +285,31 @@ end
 %%
     function setGates(src, event, x)
         if x<3 % LDR gates
-            Gates(1,x) = (diff(LDRlims)*src.Value)+LDRlims(1);
+            LDRGates(x) = (diff(LDRlims)*src.Value)+LDRlims(1);
             % check for proper ordering
-            if Gates(1,1)>Gates(1,2)
-                Gates(1,1)=Gates(1,2);
-                minLDR.Value = max(0,(Gates(1,2)-LDRlims(1))/diff(LDRlims));
-                maxLDR.Value = (Gates(1,2)-LDRlims(1))/diff(LDRlims);
+            if LDRGates(1)>LDRGates(2)
+                LDRGates(1)=LDRGates(2);
+                minLDR.Value = max(0,(LDRGates(2)-LDRlims(1))/diff(LDRlims));
+                maxLDR.Value = (LDRGates(2)-LDRlims(1))/diff(LDRlims);
             end
         else % DNA gates
-            Gates(2,x-2) = (diff(DNAlims)*src.Value)+DNAlims(1);
+            DNAGates(x-2) = (diff(DNAlims)*src.Value)+DNAlims(1);
             % check for proper ordering
-            if Gates(2,1)>Gates(2,2)
-                Gates(2,1)=Gates(2,2);
-                minDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
-                maxDNA.Value = (Gates(2,2)-DNAlims(1))/diff(DNAlims);
+            for i=1:3
+                if DNAGates(i)>DNAGates(i+1)
+                    DNAGates(i)=DNAGates(i+1);
+                    minDNA.Value = (DNAGates(i+1)-DNAlims(1))/diff(DNAlims);
+                    maxDNA.Value = (DNAGates(i+1)-DNAlims(1))/diff(DNAlims);
+                end
             end
         end
         
-        set(pltgt1, 'XData', [Gates(1,2) max(Gates(1,1), min(p.xLDR))*[1 1] [1 1]*Gates(1,2)])
+        set(pltgt1, 'XData', [LDRGates(2) max(LDRGates(1), min(p.xLDR))*[1 1] [1 1]*LDRGates(2)])
         if useDNA
-            set(pltgt2, 'XData', Gates(2,[1 1 2 2]))
-            set(pltgt3, 'XData', Gates(2,[1 1 2 2 1]), 'YData', max(Gates(1,[1 2 2 1 1]),0));
+            set(pltgt2, 'XData', DNAGates([1 1 4 4]))
+            set(pltgt2b, 'XData', DNAGates([2 2 3 3]))
+            set(pltgt3, 'XData', DNAGates([1 1 4 4 1]), 'YData', max(LDRGates([1 2 2 1 1]),0));
+            set(pltgt3b, 'XData', DNAGates([2 2 3 3 2]), 'YData', max(LDRGates([1 2 2 1 1]),0));
         end
         
         % re-evluate assignments
@@ -309,18 +317,28 @@ end
     end
 
     function [alive, dead, outcome] = EvalAliveIdx()
-        outcome = -(LDRtxt>=Gates(1,1) & LDRtxt<=Gates(1,2));
+        outcome = -(LDRtxt<LDRGates(1) | LDRtxt>LDRGates(2));
         if useDNA
-            idx = idx & (logDNA>=Gates(2,1) & logDNA<=Gates(2,2));
+            outcome(logDNA<DNAGates(1) | logDNA>DNAGates(4)) = -1;
+            outcome( (logDNA>=DNAGates(2) & logDNA<=DNAGates(3)) & outcome~=-1) = 1;
         end
-        alive = sum(idx);
-        dead = sum(~idx);
+        alive = sum(outcome>=0);
+        dead = sum(outcome==-1);
+        if useDNA
+            others = sum(outcome==0);
+            selected = sum(outcome==1);
+        end
         
         if p.plotting
             set(gcf,'currentaxes', pieax)
             cla
-            ptxt = pie([alive dead]+.1,{'Live cells' sprintf('Dead cells (%.0f%%)', ...
-                100*dead/(alive+dead))});
+            if useDNA
+                ptxt = pie([selected dead others]+.1,{'Selected cells' sprintf('Dead cells (%.0f%%)', ...
+                    100*dead/(alive+dead)) 'Other'});
+            else
+                ptxt = pie([alive dead]+.1,{'Live cells' sprintf('Dead cells (%.0f%%)', ...
+                    100*dead/(alive+dead))});
+            end
             set(ptxt(4),'fontsize',12, 'fontweight','bold')
         end
     end

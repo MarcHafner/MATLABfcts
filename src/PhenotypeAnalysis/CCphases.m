@@ -79,10 +79,10 @@ offsetEdU = max(pk-1.5*wdth,1);
 logDNA = log10(min(max(DNA, 10^p.xDNA(3)),10^p.xDNA(end-2)));
 logEdU = log10(min(max(EdU-offsetEdU, 10^p.xEdU(3)),10^p.xEdU(end-2)));
 
-% expected maximum EdU value for G1 (in log10)
-maxEdU = log10(m-offsetEdU);
+% expected maximum EdU value for G1 (in log10), at least 10% of cells
+maxEdU = max(log10(m-offsetEdU), quantile(logEdU, .2));
 % expected minumum EdU value for S (in log10)
-minEdU = log10(pk+2*wdth-offsetEdU);
+minEdU = max(log10(pk+2*wdth-offsetEdU), maxEdU);
 % expected difference between G1/G2 and S (in log10)
 EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
 
@@ -325,6 +325,10 @@ end
 % find the low EdU (G1 and early S)
 lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & ...
     logEdU>2*p.nsmooth*diff(p.xEdU(1:2)) & logEdU<maxEdU;
+if ~any(lE)
+    % relax constrain on cell with EdU below thereshold
+lE = ( (logDNA>DNAPks-1) & (logDNA<DNAPks+.1) ) & logEdU<maxEdU;
+end
 f = ksdensity(logEdU(lE),p.xEdU);
 N = histcounts(logEdU(lE),p.xEdU);
 f([true; smooth(N,3)<=1/3]) = 0; % remove single cells
@@ -471,13 +475,21 @@ end
 
 % G1 width (take only the centered cells to estimate width)
 hG1 = abs(logDNA-DNAPks(1))<.3*log10(2) & logEdU<EdUGates(1);
-NormFitG1 = fitdist(logDNA(hG1), 'Normal');
-G1lim = min(NormFitG1.icdf(.99), DNAcutoff-.1*log10(2));
+if sum(hG1)>10
+    NormFitG1 = fitdist(logDNA(hG1), 'Normal');
+    G1lim = min(NormFitG1.icdf(.99), DNAcutoff-.1*log10(2));
+else
+    G1lim = min(DNAcutoff-.1*log10(2), mean([DNAcutoff, DNAPks(1)]));
+end
 
 hG2 = abs(logDNA-DNAPks(3))<.3*log10(2) & logEdU<EdUGates(1);
-NormFit = fitdist(logDNA(hG2), 'Normal');
-G2lim = max(NormFit.icdf(.01), DNAcutoff+.1*log10(2));
-
+if sum(hG2)>10
+    NormFit = fitdist(logDNA(hG2), 'Normal');
+    G2lim = max(NormFit.icdf(.01), DNAcutoff+.1*log10(2));
+else
+    % case when too few cells
+    G2lim = max(DNAcutoff+.1*log10(2), mean([DNAcutoff, DNAPks(3)]));
+end
 %% define the DNA range and gates
 d1 = DNAcutoff-DNAPks(1);
 d2 = DNAPks(3)-DNAcutoff;
@@ -511,6 +523,7 @@ end
 %% get the fraction of cells in each phase
 [CCfrac, CCpeaks, CellIdentity] = EvalCC();
 
+%%
 if p.plotting
     % plot the evaluated phase positions
     phases = {'G1' 'S' 'G2'};
@@ -668,7 +681,7 @@ end
     function [frac, pks, cellID] = EvalCC()
         
         cellID = (logDNA>=DNAGates(1) & logDNA<DNAGates(2) & logEdU<EdUGates(1)) ... % G1
-            +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(3) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ... % S
+            +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(4) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ... % S
             +2*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1)) ... % dropped S
             +3*(logDNA>=DNAGates(3) & logDNA<DNAGates(4) & logEdU<EdUGates(1)); % G2
         

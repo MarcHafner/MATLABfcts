@@ -45,10 +45,15 @@ if ~isempty(p.savefigure), p.plotting = true; end
 
 
 logpH3 = log10(min(max(pH3, 10^p.xpH3(3)),10^p.xpH3(end-2)));
-
-% only take the cells in G1 or G2
-f = ksdensity(logpH3(CellIdentity==1 | CellIdentity==3), p.xpH3, 'width', ...
-    4*diff(p.xpH3(1:2)));
+% only take the cells in G1 or G2; to avoid contamination of pH3 by EdU
+if ~any(CellIdentity==1 | CellIdentity==3)
+    f = ksdensity(logpH3(CellIdentity==1 | CellIdentity==3), p.xpH3, 'width', ...
+        4*diff(p.xpH3(1:2)));
+else
+    % % exceptional case ... take all cells
+    f = ksdensity(logpH3, p.xpH3, 'width', ...
+        4*diff(p.xpH3(1:2)));
+end
 
 if ~isempty(p.pH3cutoff)
     % already defined gate
@@ -60,6 +65,7 @@ if isempty(p.pH3cutoff) || mean(logpH3>=pH3cutoff)>.1 % if too many M phase cell
     logtxt = 'pH3: adaptive pH3 cutoff';
     if ~isempty(p.pH3cutoff), logtxt = [logtxt ' (predefined has too many M-cells)']; end
     
+
     % determine the spread of the pH3 data to define cutoff
     [~, pk, pH3wdth] = findpeaks(f,'npeaks',3, ...
         'widthreference','halfprom','sortstr','descend');
@@ -168,7 +174,8 @@ end
     function Midx = EvalMphase()
         Midx = logpH3>=pH3cutoff;
         pH3CellIdentity = CellIdentity;
-        pH3CellIdentity(Midx & ismember(CellIdentity,[1 3])) = 4;        
+        % pH3CellIdentity(Midx & ismember(CellIdentity,[1 3])) = 4;    
+        pH3CellIdentity(Midx) = 4;        
         
         for id = 1:5
             CCfrac(id) = mean(pH3CellIdentity==mod(id,5));

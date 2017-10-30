@@ -60,7 +60,8 @@ if ~isempty(p.savefigure), p.plotting = true; end
 e = -200:4e3;
 f = ksdensity(EdU, e);
 % find the EdU peak for G1/G2
-[~,pk,wdth]=findpeaks(f,'npeaks',2,'widthreference','halfprom','sortstr','descend');
+[~,pk,wdth]=findpeaks(f,'npeaks',2,'widthreference','halfprom',...
+    'sortstr','descend','minpeakheight', 1e-3);
 wdth = wdth(argmin(pk));
 pk = e(ceil(min(pk)));
 
@@ -79,12 +80,12 @@ offsetEdU = max(pk-1.5*wdth,1);
 logDNA = log10(min(max(DNA, 10^p.xDNA(3)),10^p.xDNA(end-2)));
 logEdU = log10(min(max(EdU-offsetEdU, 10^p.xEdU(3)),10^p.xEdU(end-2)));
 
-% expected maximum EdU value for G1 (in log10), at least 10% of cells
-maxEdU = max(log10(m-offsetEdU), quantile(logEdU, .2));
+% expected maximum EdU value for G1 (in log10), at least 20% of cells
+maxEdU = max(log10(m-offsetEdU), quantile(logEdU, .2)+.1);
 % expected minumum EdU value for S (in log10)
-minEdU = max(log10(pk+2*wdth-offsetEdU), maxEdU);
+minEdU = max(log10(pk+2*wdth-offsetEdU), maxEdU-.1);
 % expected difference between G1/G2 and S (in log10)
-EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(pk-offsetEdU),1);
+EdUshift = max(log10(pk+2*wdth-offsetEdU)-log10(max(pk-offsetEdU,1)),1);
 
 
 %

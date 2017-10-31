@@ -1,4 +1,4 @@
-function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims] = CCphases(DNA, EdU, varargin)
+function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims, logtxt] = CCphases(DNA, EdU, varargin)
 % [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNAlims, EdUlims] = CCphases(DNA, EdU, ...)
 %
 % inputs are :
@@ -95,12 +95,12 @@ if p.plotting
     get_newfigure(45654,[5 285 550 600])
     % define positions
     plot_pos = [
-        .04 .8  .2 .18
-        .04 .58 .2 .16
-        .29  .8  .3 .18
-        .29  .58 .3 .16
-        .63 .65 .35 .3
-        .12  .1  .48  .4
+        .04 .81  .2 .17
+        .04 .6 .2 .16
+        .29  .81  .3 .17
+        .29  .6 .3 .16
+        .63 .6 .35 .38
+        .12  .13  .48  .4
         .7 .3  .25  .2
         .7  .15  .25 .08];
     ax = [];
@@ -405,10 +405,13 @@ else
     % set default DNA content (1.4 fold)
     DNAPks = DNAPks+[0 log10(2)*.5];
 end
-if ~isempty(p.EdUlims), EdUlims = p.EdUlims; end
 
 % at least width of 1 for the S phase box
 EdUGates = [EdUcutoff EdUPks(2)+max(EdUPks(2)-EdUcutoff,1)];
+
+if ~isempty(p.EdUlims), EdUlims = p.EdUlims;
+else, EdUlims(2) = max(EdUlims(2), EdUGates(2)+.01); end
+    
 
 %% %%%%%%%%%%%%%%%%%%%%
 % working with DNA again to find the G2
@@ -523,6 +526,7 @@ end
 
 %% get the fraction of cells in each phase
 [CCfrac, CCpeaks, CellIdentity] = EvalCC();
+logtxt = 'DNA/EdU: automatic gating';
 
 %%
 if p.plotting
@@ -569,10 +573,10 @@ if p.plotting
         % Manual adjustments for DNA content
         figpos = get(gcf,'position');
         DNAslides = {};
-        for i=1:3
+        for i=1:4
             DNAslides{i} = uicontrol('style', 'slider', 'callback', {@setDNAGates,i});
             DNAslides{i}.Units = 'normalized';
-            DNAslides{i}.Position = [plot_pos(6,1)-15/figpos(3) plot_pos(6,2)-.03*i-.01 plot_pos(6,3)+30/figpos(3) .03];
+            DNAslides{i}.Position = [plot_pos(6,1)-15/figpos(3) plot_pos(6,2)-.03*i-.005 plot_pos(6,3)+30/figpos(3) .028];
             DNAslides{i}.Value = (DNAGates(i)-DNAlims(1))/diff(DNAlims);
         end
         
@@ -608,14 +612,15 @@ end
 %%
 
     function setDNAGates(src, event, x)
+        logtxt = 'DNA/EdU: Manual adjustment';
         DNAGates(x) = (diff(DNAlims)*src.Value)+DNAlims(1);
         % check for proper ordering
-        if x<3 && DNAGates(x)>DNAGates(x+1)
+        if x<4 && DNAGates(x)>DNAGates(x+1)
             DNAGates(x) = DNAGates(x+1);
         elseif x>1 && DNAGates(x)<DNAGates(x-1)
             DNAGates(x) = DNAGates(x-1);
         end
-        for iG=1:3
+        for iG=1:4
             DNAslides{iG}.Value = (DNAGates(iG)-DNAlims(1))/diff(DNAlims);
         end
         % re-evluate assignments
@@ -625,6 +630,7 @@ end
 
 
     function setEdU(src, event, x)
+        logtxt = 'DNA/EdU: Manual adjustment';
         EdUGates(x) = (diff(EdUlims)*src.Value)+EdUlims(1);
         % check for proper ordering
         if EdUGates(1)>EdUGates(2)
@@ -702,13 +708,14 @@ end
                 DNAPks(iG) = mean(DNAGates([iG 2]));
                 EdUPks(iG) = mean([EdUGates(1) (iG==2)*EdUGates(2)]);
             end
+            EdUPks(2) = max(EdUPks(2), EdUGates(1)+.1);
         end
         
         pks = [DNAPks' EdUPks'];
     end
 
     function approveGate(src, event)
-        for iB=1:3
+        for iB=1:4
             DNAslides{iB}.Visible = 'off';
         end
         for iB=1:2

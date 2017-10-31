@@ -1,5 +1,5 @@
-function [t_results, allLiveIdx, allCellIdentity, t_summary] = CellCycleClassification(t_SingleCelldata, SingleCelldata, varargin)
-% [t_results, allLiveIdx, allCellIdentity, t_summary] = CellCycleClassification(t_SingleCelldata, SingleCelldata, ...)
+function ClassifiedCells = CellCycleClassification(t_SingleCelldata, SingleCelldata, varargin)
+% ClassifiedCells = CellCycleClassification(t_SingleCelldata, SingleCelldata, ...)
 %
 % inputs are :
 %  t_SingleCelldata  -> metadata for the plates/wells
@@ -15,86 +15,60 @@ function [t_results, allLiveIdx, allCellIdentity, t_summary] = CellCycleClassifi
 %  PosCtrlLabel -> labels for the positive controls
 %  NegCtrlLabel -> labels for the negative controls
 %
-% outputs are:
-%  t_results       -> table with all calculated data and test results
-%  allLiveIdx      -> boolean for live cells
-%  allCellIdentity -> cell cycle phase assigned to each cell (dead are -1; other 0)
-%  t_summary       -> table with summary of test results by condition
+% output is a structure ClassifiedCells with fields:
+%  t_results       -> table with all calculated data and metadata
+%  allCellIdentity -> cell cycle phase assigned to each cell 
+%                       (dead are -1; unclassified 0; G1 1; S 2; G2 3; M 4)
+%  t_qc            -> table with summary of qc results by well
+%  t_summary       -> table with summary of qc results by condition
+%  plotResults     -> structure with the values and gates for plotting EdU/DNA
 %
-
 %% assign inputs and prepare tests
 
 assert(height(t_SingleCelldata)==length(SingleCelldata))
 
-p = inputParser;
-
-% names used for each channel
-addParameter(p, 'Channelnames', ...
-    struct('LDR', 'NucleiSelected_LDRTXTSERSpot8Px', ...
-    'DNA', 'NucleiSelected_DNAcontent', ...
-    'EdU', 'NucleiSelected_EdUINT', ...
-    'pH3', 'NucleiSelected_PH3INT'), ...
-    @(x) isstruct(x) && isfield(x,'LDR') && isfield(x,'DNA'))
-% default to save the results as images; empty if not saving
-addParameter(p, 'savefolder', '', @ischar)
-% additional keys to consider for ananlyzing the results
-addParameter(p, 'ConditionKeys', {}, @cellstr)
-% flags for the type of treatments
-addParameter(p, 'NegCtrlLabel', {'ctl_vehicle' 'untrt'}, @cellstr)
-addParameter(p, 'PosCtrlLabel', {'ctl_toxic' 'ctl_G1' 'ctl_S' 'ctl_G2'}, @cellstr)
-% define cutoffs for tests
-addParameter(p, 'TestCutoffs', ...
-     struct(...
-    'FracDead', .1, ...
-    'DeadConsist', .02, ...
-    'Unclass', .05, ...
-    'CCphase', .01, ...
-    'CCphase_pos', @(x)1.3+x+.1, ...
-    'CCConsist', .02, ...
-    'PksConsist', log10(1.2)), ...
-    @(x) isstruct(x) && all(isfield(x, {'FracDead', 'DeadConsist', 'Unclass', ...
-    'CCphase', 'CCphase_pos', 'CCConsist', 'PksConsist'})))
-addParameter(p, 'CellFrac_Adpative_pH3cutoff', 1/3, @(x) isscalar(x) || isempty(x))
-addParameter(p, 'interactive', false, @islogical) %%%   option ?? <<<<<<<<<<<<<<<----------------------
-
-parse(p,varargin{:});
-p = p.Results;
-if isempty(p.CellFrac_Adpative_pH3cutoff), p.CellFrac_Adpative_pH3cutoff = -1; end
-
-% default to save the results as images; empty if not saving
-if ~isempty(p.savefolder) && ~exist(p.savefolder,'dir'), mkdir(p.savefolder); end
-%%%   option to save only if a test fails ?? <<<<<<<<<<<<<<<----------------------
+p = parseCellCycleInputs(varargin{:});
 
 
 % flag for the modular approach
 useEdU = ~isempty(p.Channelnames.EdU);
 usepH3 = ~isempty(p.Channelnames.pH3);
 
+% save the results
+plotResults = struct('logDNA', repmat({[]}, height(t_SingleCelldata),1), ...
+    'logEdU', repmat({[]}, height(t_SingleCelldata),1), ...
+    'DNAGates', repmat({[]}, height(t_SingleCelldata),1), ...
+    'EdUGates', repmat({[]}, height(t_SingleCelldata),1));
+    
 %% %%%%%%%%%%%%%%%%%%
 % start the analysis
 
 % get all different conditions
-t_groups = unique(t_SingleCelldata(:,unique([{'Barcode', 'CellLine'} p.ConditionKeys],'stable')));
+default_metadata = {'CellLine' 'DrugName' 'Conc' 'DrugName2' 'Conc2' 'Time'};
+t_groups = unique(t_SingleCelldata(:,unique([{'Barcode'} p.ConditionKeys],'stable')));
 
 % start the result report
-t_results = [t_SingleCelldata(:,unique([{'Barcode', 'CellLine'} p.ConditionKeys ...
-    {'pert_type' 'Well'}],'stable')) ...
+t_results = [t_SingleCelldata(:,unique([ ...
+    intersect(default_metadata, varnames(t_SingleCelldata), 'stable'), ...
+    p.ConditionKeys {'pert_type' 'Barcode' 'Well'}],'stable')) ...
     array2table(NaN(height(t_SingleCelldata),2), 'variablenames', ...
-    {'LiveCells' 'DeadCells'}) ...
+    {'LiveCells' 'DeadCells'})];
+t_qc = [t_results(:, unique([{'Barcode', 'CellLine'} p.ConditionKeys 'pert_type'],'stable')) ...
     array2table(false(height(t_SingleCelldata),2),'variablenames', ...
-    {'PassFracDead' 'PassDeadConsist'})];
+    {'PassFracDead' 'PassDeadConsist'}) ...
+    table(repmat({''},height(t_SingleCelldata),1),'variablenames', {'log'})];
 
 if useEdU
     t_results = [t_results ...
         table(NaN(height(t_SingleCelldata),4+usepH3), ...
         repmat({NaN(3,2)}, height(t_SingleCelldata),1), ...
-        'variablenames', {'CCfrac' 'CCPks'}) ...
+        'variablenames', {'CCfrac' 'CCPks'})];
+    t_qc = [t_qc ...
         array2table(false(height(t_SingleCelldata),4),'variablenames', ...
         {'PassUnclass' 'PassCCphase' 'PassCCConsist' 'PassPksConsist'})];
 end
 
 % structure to store all results per well
-allLiveIdx = cell(height(t_results),1);
 allCellIdentity = cell(height(t_results),1);
 CellIdentity = [];
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,18 +144,19 @@ for iGr = 1:height(t_groups)
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome] = DeadCellFilter(LDRtxt, DNA, ...
+        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
             ... removing reference gates for cases when DNA distribution changes 
             'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
+        logtxt = ['Auto: ' ltxt];
         % store the results
-        allLiveIdx{NegCtrlidx(iW)} = CellOutcome;
+        allCellIdentity{NegCtrlidx(iW)} = CellOutcome;
         t_results(NegCtrlidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check consistency and report outcome
         PassFracDead = DeadCells/length(LDRtxt) < p.TestCutoffs.FracDead;
         PassDeadConsist = abs(DeadCells/length(LDRtxt) - RefFracDead) < p.TestCutoffs.DeadConsist;
         
-        t_results(NegCtrlidx(iW), {'PassFracDead' 'PassDeadConsist'}) = ...
+        t_qc(NegCtrlidx(iW), {'PassFracDead' 'PassDeadConsist'}) = ...
             {PassFracDead PassDeadConsist};
         
         if useEdU
@@ -189,21 +164,26 @@ for iGr = 1:height(t_groups)
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_EdU.jpg'];
             end
-            [CCPks, CCfrac,~,~,CellIdentity] = CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
+            [CCPks, CCfrac, ...
+                plotResults(NegCtrlidx(iW)).DNAGates, plotResults(NegCtrlidx(iW)).EdUGates, ...
+                CellIdentity, ...
+                plotResults(NegCtrlidx(iW)).logDNA, plotResults(NegCtrlidx(iW)).logEdU,~,~,ltxt] = ...
+                CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
                 'savefig', savefig, 'DNAlims', DNAlims, 'EdUlims', EdUlims);
+            logtxt = [logtxt '; ' ltxt];
             
             if usepH3
                 pH3 = SingleCelldata(NegCtrlidx(iW)).(p.Channelnames.pH3);
                 if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                         'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_pH3.jpg'];
                 end
-                CCfrac = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', RefpH3cutoff);
+                logtxt = [logtxt '; ' ltxt];
             end
             
             % store the results
-            allCellIdentity{NegCtrlidx(iW)} = CellOutcome;
             allCellIdentity{NegCtrlidx(iW)}(CellOutcome==1) = CellIdentity;
             t_results(NegCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
@@ -212,9 +192,10 @@ for iGr = 1:height(t_groups)
             PassCCConsist = max(abs(CCfrac - RefCCfrac)) < p.TestCutoffs.CCConsist;
             PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
-            t_results(NegCtrlidx(iW), ...
+            t_qc(NegCtrlidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassCCConsist' 'PassPksConsist'}) = ...
                 {PassUnclass PassCCphase PassCCConsist PassPksConsist};
+            t_qc.log{NegCtrlidx(iW)} = logtxt;
         end
     end
     fprintf(' done\n')
@@ -234,15 +215,16 @@ for iGr = 1:height(t_groups)
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome] = DeadCellFilter(LDRtxt, DNA, ...
+        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
             ... removing reference gates for cases when DNA distribution changes 
             'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
+        logtxt = ['Auto: ' ltxt];
         % store the results
-        allLiveIdx{PosCtrlidx(iW)} = CellOutcome;
+        allCellIdentity{PosCtrlidx(iW)} = CellOutcome;
         t_results(PosCtrlidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check and report outcome (special for toxic positive control)
-        t_results.PassFracDead(PosCtrlidx(iW)) = (DeadCells/length(LDRtxt)) > ...
+        t_qc.PassFracDead(PosCtrlidx(iW)) = (DeadCells/length(LDRtxt)) > ...
             (RefFracDead + .5*(t_SingleCelldata.pert_type(PosCtrlidx(iW))=='ctl_toxic'));
         
         if useEdU
@@ -250,8 +232,13 @@ for iGr = 1:height(t_groups)
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_EdU.jpg'];
             end
-            [CCPks, CCfrac,~,~,CellIdentity] = CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
+            [CCPks, CCfrac, ...
+                plotResults(PosCtrlidx(iW)).DNAGates, plotResults(PosCtrlidx(iW)).EdUGates, ...
+                CellIdentity, ...
+                plotResults(PosCtrlidx(iW)).logDNA, plotResults(PosCtrlidx(iW)).logEdU,~,~,ltxt] = ...
+                CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
                 'savefig', savefig, 'DNAlims', DNAlims, 'EdUlims', EdUlims);
+            logtxt = [logtxt '; ' ltxt];
             
             if usepH3
                 pH3 = SingleCelldata(PosCtrlidx(iW)).(p.Channelnames.pH3);
@@ -263,14 +250,14 @@ for iGr = 1:height(t_groups)
                 else
                     temp_pH3cutoff = [];
                 end
-                CCfrac = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', temp_pH3cutoff);
+                logtxt = [logtxt '; ' ltxt];
                     
             end
             
             % store the results
-            allCellIdentity{PosCtrlidx(iW)} = CellOutcome;
             allCellIdentity{PosCtrlidx(iW)}(CellOutcome==1) = CellIdentity;
             t_results(PosCtrlidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
@@ -291,9 +278,10 @@ for iGr = 1:height(t_groups)
             end
             PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
-            t_results(PosCtrlidx(iW), ...
+            t_qc(PosCtrlidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassPksConsist'}) = ...
                 {PassUnclass PassCCphase PassPksConsist};
+            t_qc.log{PosCtrlidx(iW)} = logtxt;
         end
     end
     fprintf(' done\n')
@@ -305,10 +293,10 @@ for iGr = 1:height(t_groups)
         idx = find(eqtable(t_Posctrl(iP,:), t_SingleCelldata));
         FracDead = t_results.DeadCells(idx)./ ...
             (t_results.DeadCells(idx) + t_results.LiveCells(idx));
-        t_results.PassDeadConsist(idx) = abs(FracDead - mean(FracDead)) < p.TestCutoffs.DeadConsist;
+        t_qc.PassDeadConsist(idx) = abs(FracDead - mean(FracDead)) < p.TestCutoffs.DeadConsist;
         
         CCfrac = t_results.CCfrac(idx,:);
-        t_results.PassCCConsist(idx) = max(abs(CCfrac - ...
+        t_qc.PassCCConsist(idx) = max(abs(CCfrac - ...
             repmat(mean(CCfrac,1),length(idx),1)),[],2) < 2*p.TestCutoffs.CCConsist;
     end
     
@@ -329,23 +317,30 @@ for iGr = 1:height(t_groups)
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome] = DeadCellFilter(LDRtxt, DNA, ...
+        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
             ... removing reference gates for cases when DNA distribution changes 
             'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
+        logtxt = ['Auto: ' ltxt];
+        
         % store the results
-        allLiveIdx{Trtidx(iW)} = CellOutcome;
+        allCellIdentity{Trtidx(iW)} = CellOutcome;
         t_results(Trtidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check and report outcome (special for toxic positive control)
-        t_results.PassFracDead(Trtidx(iW)) = true;
+        t_qc.PassFracDead(Trtidx(iW)) = true;
         
         if useEdU
             EdU = SingleCelldata(Trtidx(iW)).(p.Channelnames.EdU);
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_EdU.jpg'];
             end
-            [CCPks, CCfrac,~,~,CellIdentity] = CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
+            [CCPks, CCfrac, ...
+                plotResults(Trtidx(iW)).DNAGates, plotResults(Trtidx(iW)).EdUGates, ...
+                CellIdentity, ...
+                plotResults(Trtidx(iW)).logDNA, plotResults(Trtidx(iW)).logEdU,~,~,ltxt] = ...
+                CCphases(DNA(CellOutcome==1), EdU(CellOutcome==1), ...
                 'savefig', savefig, 'DNAlims', DNAlims, 'EdUlims', EdUlims);
+            logtxt = [logtxt '; ' ltxt];
             
             if usepH3
                 pH3 = SingleCelldata(Trtidx(iW)).(p.Channelnames.pH3);
@@ -357,13 +352,13 @@ for iGr = 1:height(t_groups)
                 else
                     temp_pH3cutoff = [];
                 end
-                CCfrac = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', temp_pH3cutoff);
+                logtxt = [logtxt '; ' ltxt];
             end
             
             % store the results
-            allCellIdentity{Trtidx(iW)} = CellOutcome;
             allCellIdentity{Trtidx(iW)}(CellOutcome==1) = CellIdentity;
             t_results(Trtidx(iW), {'CCfrac' 'CCPks'}) = {CCfrac {CCPks}};
             % check consistency and report outcome
@@ -371,12 +366,12 @@ for iGr = 1:height(t_groups)
             PassCCphase = true;  
             PassPksConsist = max(abs(CCPks(:,1)-RefCCPks(:,1))) < p.TestCutoffs.PksConsist;
             
-            t_results(Trtidx(iW), ...
+            t_qc(Trtidx(iW), ...
                 {'PassUnclass' 'PassCCphase' 'PassPksConsist'}) = ...
                 {PassUnclass PassCCphase PassPksConsist};
+            t_qc.log{Trtidx(iW)} = logtxt;
         end
     end
-    fprintf(' done\n')
     
     %% check consistency among the wells with same treatments
     t_trt = unique(t_SingleCelldata(Trtidx,  ...
@@ -385,10 +380,10 @@ for iGr = 1:height(t_groups)
         idx = find(eqtable(t_trt(iP,:), t_SingleCelldata));
         FracDead = t_results.DeadCells(idx)./ ...
             (t_results.DeadCells(idx) + t_results.LiveCells(idx));
-        t_results.PassDeadConsist(idx) = abs(FracDead - nanmean(FracDead)) < p.TestCutoffs.DeadConsist;
+        t_qc.PassDeadConsist(idx) = abs(FracDead - nanmean(FracDead)) < p.TestCutoffs.DeadConsist;
         
         CCfrac = t_results.CCfrac(idx,:);
-        t_results.PassCCConsist(idx) = max(abs(CCfrac - ...
+        t_qc.PassCCConsist(idx) = max(abs(CCfrac - ...
             repmat(nanmean(CCfrac,1),length(idx),1)),[],2) < 2*p.TestCutoffs.CCConsist;
     end
     
@@ -397,8 +392,11 @@ end
 
 
 %%
-t_summary = collapse(t_results, @mean, ...
+t_summary = collapse(t_qc, @mean, ...
     'keyvars', unique([{'Barcode', 'CellLine'} p.ConditionKeys 'pert_type'],'stable'), ...
-    'valvars', intersect(varnames(t_results), {'PassFracDead' 'PassDeadConsist' 'PassUnclass' ...
+    'valvars', intersect(varnames(t_qc), {'PassFracDead' 'PassDeadConsist' 'PassUnclass' ...
     'PassCCphase' 'PassPksConsist' 'PassCCConsist'}, 'stable'));
 
+
+ClassifiedCells = struct('t_results', {t_results}, 'allCellIdentity', {allCellIdentity}, ...
+    't_qc', {t_qc}, 't_summary', {t_summary}, 'plotResults', {plotResults});

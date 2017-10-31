@@ -167,6 +167,7 @@ end
     function setCutoff(src, event, x)
         pH3cutoff = (diff(pH3lims)*src.Value)+pH3lims(1);        
         set(pltgt1, 'XData', pH3cutoff*[1 1])
+        logtxt = 'pH3: Manual adjustment';
         EvalMphase();
     end
 

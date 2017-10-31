@@ -1,4 +1,4 @@
-function [LiveCells, DeadCells, LDRGates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, varargin)
+function [LiveCells, DeadCells, LDRGates, CellOutcome, LDRlims, DNAlims, logtxt] = DeadCellFilter(LDRtxt, varargin)
 % [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
 %
 %
@@ -236,7 +236,7 @@ end
 
 % finalize the results
 [LiveCells, DeadCells, CellOutcome] = EvalAliveIdx();
-
+logtxt = 'LDR/DNA: Automatic gating';
 
 
 if p.interactive
@@ -284,6 +284,7 @@ if p.plotting
 end
 %%
     function setGates(src, event, x)
+        logtxt = 'LDR/DNA: Manual adjustment';
         if x<3 % LDR gates
             LDRGates(x) = (diff(LDRlims)*src.Value)+LDRlims(1);
             % check for proper ordering

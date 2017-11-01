@@ -35,10 +35,17 @@ useEdU = ~isempty(p.Channelnames.EdU);
 usepH3 = ~isempty(p.Channelnames.pH3);
 
 % save the results
-plotResults = struct('logDNA', repmat({[]}, height(t_SingleCelldata),1), ...
+plotResults = struct('LDR', {SingleCelldata.(p.Channelnames.LDR)}', ...
+    'LDRGates', repmat({[]}, height(t_SingleCelldata),1), ...
+    'DNApreGates', repmat({[]}, height(t_SingleCelldata),1), ...
+    'DNA', {SingleCelldata.(p.Channelnames.DNA)}', ...
+    'EdU', {SingleCelldata.(p.Channelnames.EdU)}', ...
+    'logDNA', repmat({[]}, height(t_SingleCelldata),1), ...
     'logEdU', repmat({[]}, height(t_SingleCelldata),1), ...
     'DNAGates', repmat({[]}, height(t_SingleCelldata),1), ...
-    'EdUGates', repmat({[]}, height(t_SingleCelldata),1));
+    'EdUGates', repmat({[]}, height(t_SingleCelldata),1), ...
+    'pH3', {SingleCelldata.(p.Channelnames.pH3)}', ...
+    'pH3cutoff', repmat({[]}, height(t_SingleCelldata),1));
     
 %% %%%%%%%%%%%%%%%%%%
 % start the analysis
@@ -101,21 +108,21 @@ for iGr = 1:height(t_groups)
         AllCtrlidx = find(eqtable(t_groups(iGr,:), t_SingleCelldata)); end
     %  <<<<<<<<< -- maybe safer to only use the negative controls --------
     
-    LDRtxt = vertcat(SingleCelldata(AllCtrlidx).(p.Channelnames.LDR));
+    LDR = vertcat(SingleCelldata(AllCtrlidx).(p.Channelnames.LDR));
     DNA = vertcat(SingleCelldata(AllCtrlidx).(p.Channelnames.DNA));
     
     if ~isempty(p.savefolder), savefig = [grp_savefolder 'All_ctl_LDR.jpg']; end
-    [~, ~, RefDeadGates, ~, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...
+    [~, ~, ~, ~, ~, LDRlims, DNAlims] = DeadCellFilter(LDR, DNA, ...
         'savefig', savefig);
     
     
     % run on all negative controls
-    LDRtxt = vertcat(SingleCelldata(NegCtrlidx).(p.Channelnames.LDR));
+    LDR = vertcat(SingleCelldata(NegCtrlidx).(p.Channelnames.LDR));
     DNA = vertcat(SingleCelldata(NegCtrlidx).(p.Channelnames.DNA));
     if ~isempty(p.savefolder), savefig = [grp_savefolder 'All_Negctl_LDR.jpg']; end
-    [~, RefFracDead, ~, CellOutcome] = DeadCellFilter(LDRtxt, DNA, ...
+    [~, RefFracDead, ~, ~, CellOutcome] = DeadCellFilter(LDR, DNA, ...
         'savefig', savefig, 'LDRlims', LDRlims, 'DNAlims', DNAlims);
-    RefFracDead = RefFracDead/length(LDRtxt);
+    RefFracDead = RefFracDead/length(LDR);
     meanNcells = sum(CellOutcome==1)/length(NegCtrlidx);
     if useEdU
         EdU = vertcat(SingleCelldata(NegCtrlidx).(p.Channelnames.EdU));
@@ -136,16 +143,17 @@ for iGr = 1:height(t_groups)
     for iW = 1:length(NegCtrlidx)
         fprintf(' %s', char(t_SingleCelldata.Well(NegCtrlidx(iW))));
         
-        LDRtxt = SingleCelldata(NegCtrlidx(iW)).(p.Channelnames.LDR);
+        LDR = SingleCelldata(NegCtrlidx(iW)).(p.Channelnames.LDR);
         DNA = SingleCelldata(NegCtrlidx(iW)).(p.Channelnames.DNA);
         
-        if isempty(LDRtxt), continue, end % display warning or print in log? <-----------------
+        if isempty(LDR), continue, end % display warning or print in log? <-----------------
         
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
-            ... removing reference gates for cases when DNA distribution changes 
+        [LiveCells, DeadCells, plotResults(NegCtrlidx(iW)).LDRGates, ...
+            plotResults(NegCtrlidx(iW)).DNAGates, CellOutcome,~,~,ltxt] = ...
+            DeadCellFilter(LDR, DNA, ...
             'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         logtxt = ['Auto: ' ltxt];
@@ -153,8 +161,8 @@ for iGr = 1:height(t_groups)
         allCellIdentity{NegCtrlidx(iW)} = CellOutcome;
         t_results(NegCtrlidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check consistency and report outcome
-        PassFracDead = DeadCells/length(LDRtxt) < p.TestCutoffs.FracDead;
-        PassDeadConsist = abs(DeadCells/length(LDRtxt) - RefFracDead) < p.TestCutoffs.DeadConsist;
+        PassFracDead = DeadCells/length(LDR) < p.TestCutoffs.FracDead;
+        PassDeadConsist = abs(DeadCells/length(LDR) - RefFracDead) < p.TestCutoffs.DeadConsist;
         
         t_qc(NegCtrlidx(iW), {'PassFracDead' 'PassDeadConsist'}) = ...
             {PassFracDead PassDeadConsist};
@@ -177,7 +185,8 @@ for iGr = 1:height(t_groups)
                 if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                         'Negctl_' char(t_SingleCelldata.Well(NegCtrlidx(iW))) '_pH3.jpg'];
                 end
-                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, plotResults(NegCtrlidx(iW)).H3cutoff, ~, ...
+                    plotResults(NegCtrlidx(iW)).logpH3, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', RefpH3cutoff);
                 logtxt = [logtxt '; ' ltxt];
@@ -207,16 +216,19 @@ for iGr = 1:height(t_groups)
     for iW = 1:length(PosCtrlidx)
         fprintf(' %s', char(t_SingleCelldata.Well(PosCtrlidx(iW))));
         
-        LDRtxt = SingleCelldata(PosCtrlidx(iW)).(p.Channelnames.LDR);
+        LDR = SingleCelldata(PosCtrlidx(iW)).(p.Channelnames.LDR);
         DNA = SingleCelldata(PosCtrlidx(iW)).(p.Channelnames.DNA);
+        plotResults(PosCtrlidx(iW)).LDR = LDR;
+        plotResults(PosCtrlidx(iW)).DNA = DNA;
         
-        if isempty(LDRtxt), continue, end % display warning or print in log? <-----------------
+        if isempty(LDR), continue, end % display warning or print in log? <-----------------
         
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
-            ... removing reference gates for cases when DNA distribution changes 
+        [LiveCells, DeadCells, plotResults(PosCtrlidx(iW)).LDRGates, ...
+            plotResults(PosCtrlidx(iW)).DNAGates, CellOutcome,~,~,ltxt] = ...
+            DeadCellFilter(LDR, DNA, ...
             'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         logtxt = ['Auto: ' ltxt];
@@ -224,11 +236,12 @@ for iGr = 1:height(t_groups)
         allCellIdentity{PosCtrlidx(iW)} = CellOutcome;
         t_results(PosCtrlidx(iW), {'LiveCells' 'DeadCells'}) = {LiveCells, DeadCells};
         % check and report outcome (special for toxic positive control)
-        t_qc.PassFracDead(PosCtrlidx(iW)) = (DeadCells/length(LDRtxt)) > ...
+        t_qc.PassFracDead(PosCtrlidx(iW)) = (DeadCells/length(LDR)) > ...
             (RefFracDead + .5*(t_SingleCelldata.pert_type(PosCtrlidx(iW))=='ctl_toxic'));
         
         if useEdU
             EdU = SingleCelldata(PosCtrlidx(iW)).(p.Channelnames.EdU);
+            plotResults(PosCtrlidx(iW)).EdU = EdU;
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     'Posctl_' char(t_SingleCelldata.Well(PosCtrlidx(iW))) '_EdU.jpg'];
             end
@@ -250,7 +263,8 @@ for iGr = 1:height(t_groups)
                 else
                     temp_pH3cutoff = [];
                 end
-                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, plotResults(PosCtrlidx(iW)).H3cutoff, ~, ...
+                    plotResults(PosCtrlidx(iW)).logpH3, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', temp_pH3cutoff);
                 logtxt = [logtxt '; ' ltxt];
@@ -309,17 +323,18 @@ for iGr = 1:height(t_groups)
     for iW = 1:length(Trtidx)
         if mod(iW, ceil(length(Trtidx)/8))==0, fprintf(' %i', iW); end
         
-        LDRtxt = SingleCelldata(Trtidx(iW)).(p.Channelnames.LDR);
+        LDR = SingleCelldata(Trtidx(iW)).(p.Channelnames.LDR);
         DNA = SingleCelldata(Trtidx(iW)).(p.Channelnames.DNA);
+        plotResults(Trtidx(iW)).LDR = LDR;
+        plotResults(Trtidx(iW)).DNA = DNA;
         
-        if isempty(LDRtxt), continue, end % display warning or print in log? <-----------------
+        if isempty(LDR), continue, end % display warning or print in log? <-----------------
         
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_LDR.jpg'];
         end
-        [LiveCells, DeadCells, ~, CellOutcome,~,~,ltxt] = DeadCellFilter(LDRtxt, DNA, ...
-            ... removing reference gates for cases when DNA distribution changes 
-            'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
+        [LiveCells, DeadCells, plotResults(Trtidx(iW)).LDRGates, plotResults(Trtidx(iW)).DNAGates, CellOutcome,~,~,ltxt] = ...
+            DeadCellFilter(LDR, DNA, 'LDRlims', LDRlims, 'DNAlims', DNAlims, ...
             'savefig', savefig);
         logtxt = ['Auto: ' ltxt];
         
@@ -331,6 +346,7 @@ for iGr = 1:height(t_groups)
         
         if useEdU
             EdU = SingleCelldata(Trtidx(iW)).(p.Channelnames.EdU);
+            plotResults(Trtidx(iW)).EdU = EdU;
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_EdU.jpg'];
             end
@@ -344,6 +360,7 @@ for iGr = 1:height(t_groups)
             
             if usepH3
                 pH3 = SingleCelldata(Trtidx(iW)).(p.Channelnames.pH3);
+                logResults(Trtidx(iW)).pH3 = pH3;
                 if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                         'Trt_' char(t_SingleCelldata.Well(Trtidx(iW))) '_pH3.jpg'];
                 end
@@ -352,7 +369,8 @@ for iGr = 1:height(t_groups)
                 else
                     temp_pH3cutoff = [];
                 end
-                [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
+                [CCfrac, CellIdentity, plotResults(Trtidx(iW)).H3cutoff, ~, ...
+                    ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
                     CellIdentity, 'savefig', savefig, 'pH3lims', pH3lims, ...
                     'pH3cutoff', temp_pH3cutoff);
                 logtxt = [logtxt '; ' ltxt];

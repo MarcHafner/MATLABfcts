@@ -1,4 +1,4 @@
-function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims, logtxt] = pH3Filter(pH3, CellIdentity, varargin)
+function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims, logpH3, logtxt] = pH3Filter(pH3, CellIdentity, varargin)
 % [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims] = pH3Filter(pH3, CellIdentity, ...)
 %
 %
@@ -18,7 +18,7 @@ function [CCfrac, pH3CellIdentity, pH3cutoff, pH3lims, logtxt] = pH3Filter(pH3, 
 %
 % outputs are:
 %  CCfrac          -> fraction of cells in each phase (G1, S, G2, M, unclass)
-%  pH3CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2, 4=M)
+%  pH3CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2, 10.0/10.1/10.2/10.3=M)
 %  pH3cutoff       -> selected cutoff for pH3 channel
 %  pH3lims         -> selected range for pH3 channel
 %
@@ -174,12 +174,11 @@ end
 
     function Midx = EvalMphase()
         Midx = logpH3>=pH3cutoff;
-        pH3CellIdentity = CellIdentity;
-        % pH3CellIdentity(Midx & ismember(CellIdentity,[1 3])) = 4;    
-        pH3CellIdentity(Midx) = 4;        
+        pH3CellIdentity = CellIdentity;   
+        pH3CellIdentity(Midx) = 4+ pH3CellIdentity(Midx)/10;
         
         for id = 1:5
-            CCfrac(id) = mean(pH3CellIdentity==mod(id,5));
+            CCfrac(id) = mean(floor(pH3CellIdentity)==mod(id,5));
         end
         
         if p.plotting

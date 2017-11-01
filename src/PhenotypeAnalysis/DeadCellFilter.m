@@ -1,5 +1,5 @@
-function [LiveCells, DeadCells, LDRGates, CellOutcome, LDRlims, DNAlims, logtxt] = DeadCellFilter(LDRtxt, varargin)
-% [LiveCells, DeadCells, Gates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
+function [LiveCells, DeadCells, LDRGates, DNAGates, CellOutcome, LDRlims, DNAlims, logtxt] = DeadCellFilter(LDRtxt, varargin)
+% [LiveCells, DeadCells, LDRGates, DNAGates, CellOutcome, LDRlims, DNAlims] = DeadCellFilter(LDRtxt, DNA, ...)
 %
 %
 % inputs are :

@@ -24,7 +24,7 @@ function [CCpeaks, CCfrac, DNAGates, EdUGates, CellIdentity, logDNA, logEdU, DNA
 %  CCfrac       -> fraction of cells in each phase (G1, S, G2, unclass)
 %  DNAGates     -> selected DNA gates (3 values)
 %  EdUGates     -> selected EdU gates (2 values)
-%  CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S, 3=G2/M)
+%  CellIdentity -> cell cycle identity (0=unclass, 1=G1, 2=S 2.1=droppped S, 3=G2/M)
 %  logDNA       -> transformed values for DNA channel
 %  logEdU       -> transformed values for EdU channel
 %  DNAlims      -> selected range for DNA channel
@@ -689,11 +689,11 @@ end
         
         cellID = (logDNA>=DNAGates(1) & logDNA<DNAGates(2) & logEdU<EdUGates(1)) ... % G1
             +2*(logDNA>=DNAGates(1) & logDNA<DNAGates(4) & logEdU>=EdUGates(1) & logEdU<EdUGates(2)) ... % S
-            +2*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1)) ... % dropped S
+            +2.1*(logDNA>=DNAGates(2) & logDNA<DNAGates(3) & logEdU<EdUGates(1)) ... % dropped S
             +3*(logDNA>=DNAGates(3) & logDNA<DNAGates(4) & logEdU<EdUGates(1)); % G2
         
         for id = 1:4
-            frac(id) = mean(cellID==mod(id,4));
+            frac(id) = mean(floor(cellID)==mod(id,4));
         end
         
         for iG=1:3

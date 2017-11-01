@@ -1,4 +1,4 @@
-function UpdatedClassifiedCells = CellCycleReClass(ClassifiedCells, SingleCelldata, ManualIdxs, SelectedWells, varargin)
+function UpdatedClassifiedCells = CellCycleReClass(ClassifiedCells, ManualIdxs, SelectedWells, varargin)
 % ClassifiedCells = CellCycleClassification(t_SingleCelldata, SingleCelldata, ...)
 %
 % inputs are :
@@ -24,14 +24,13 @@ function UpdatedClassifiedCells = CellCycleReClass(ClassifiedCells, SingleCellda
 %  plotResults     -> structure with the values and gates for plotting EdU/DNA
 %
 %% assign inputs and prepare tests
-assert(length(SingleCelldata)==height(ClassifiedCells.t_results))
 
 if islogical(ManualIdxs)
-    assert(length(SingleCelldata)==length(ManualIdxs))
+    assert(height(ClassifiedCells.t_results)==length(ManualIdxs))
     ManualIdxs = find(ManualIdxs);
     
 elseif isvector(ManualIdxs)
-    assert(all(ManualIdxs>0 & ManualIdxs<=length(SingleCelldata)))
+    assert(all(ManualIdxs>0 & ManualIdxs<=height(ClassifiedCells.t_results)))
     
 else
     SelectedBarcodes = ManualIdxs;
@@ -52,8 +51,8 @@ end
 p = parseCellCycleInputs(varargin{:});
 
 % flag for the modular approach
-useEdU = ~isempty(p.Channelnames.EdU);
-usepH3 = ~isempty(p.Channelnames.pH3);
+useEdU = ~isempty(ClassifiedCells.plotResults(1).EdU);
+usepH3 = ~isempty(ClassifiedCells.plotResults(1).pH3);
 
 % folder for storing data
 if ~isempty(p.savefolder)
@@ -71,7 +70,7 @@ plotResults = ClassifiedCells.plotResults;
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % loop through the selected conditions
 
-fprintf('\tTreatment wells (%i): ', length(ManualIdxs));
+fprintf('\nReprocessing %i wells: ', length(ManualIdxs));
 for iW = 1:length(ManualIdxs)
     
     if ismember(t_results.pert_type(ManualIdxs(iW)), p.NegCtrlLabel)
@@ -81,21 +80,21 @@ for iW = 1:length(ManualIdxs)
     else
         welltag = 'Trt_';
     end
-    fprintf('% 2i/%i: %s - %s: %s, c=%.2g (%s)', iW, length(ManualIdxs), ...
+    fprintf('  % 2i/%i: %s - %s: %s, c=%.2g (%s)', iW, length(ManualIdxs), ...
         t_results.Barcode(ManualIdxs(iW)), t_results.Well(ManualIdxs(iW)), ...
         t_results.DrugName(ManualIdxs(iW)), t_results.Conc(ManualIdxs(iW)), welltag(1:end-1));
     logtxt = 'MANUAL:';
     
     
-    LDRtxt = SingleCelldata(ManualIdxs(iW)).(p.Channelnames.LDR);
-    DNA = SingleCelldata(ManualIdxs(iW)).(p.Channelnames.DNA);
+    LDR = ClassifiedCells.plotResults(ManualIdxs(iW)).LDR;
+    DNA = ClassifiedCells.plotResults(ManualIdxs(iW)).DNA;
     
-    if isempty(LDRtxt), continue, end % display warning or print in log? <-----------------
+    if isempty(LDR), continue, end % display warning or print in log? <-----------------
     
     if ~isempty(p.savefolder), savefig = [grp_savefolder ...
             welltag char(t_results.Well(ManualIdxs(iW))) '_LDR_manual.jpg'];
     end
-    [LiveCells, DeadCells, ~, CellOutcome, ~, ~, ltxt] = DeadCellFilter(LDRtxt, DNA, ...
+    [LiveCells, DeadCells, plotResults(ManualIdxs(iW)).LDRGates, plotResults(ManualIdxs(iW)).DNAGates, CellOutcome, ~, ~, ltxt] = DeadCellFilter(LDR, DNA, ...
         'savefig', savefig, 'interactive', true);
     % store the results
     logtxt = [logtxt ' ' ltxt];
@@ -105,7 +104,7 @@ for iW = 1:length(ManualIdxs)
     t_qc.PassFracDead(ManualIdxs(iW)) = true;
     
     if useEdU
-        EdU = SingleCelldata(ManualIdxs(iW)).(p.Channelnames.EdU);
+        EdU = ClassifiedCells.plotResults(ManualIdxs(iW)).EdU;
         if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                 welltag char(t_results.Well(ManualIdxs(iW))) '_EdU_manual.jpg'];
         end
@@ -118,11 +117,12 @@ for iW = 1:length(ManualIdxs)
         logtxt = [logtxt '; ' ltxt];
         
         if usepH3
-            pH3 = SingleCelldata(ManualIdxs(iW)).(p.Channelnames.pH3);
+            pH3 = ClassifiedCells.plotResults(ManualIdxs(iW)).pH3;
             if ~isempty(p.savefolder), savefig = [grp_savefolder ...
                     welltag char(t_results.Well(ManualIdxs(iW))) '_pH3_manual.jpg'];
             end
-            [CCfrac, CellIdentity, ~, ~, ltxt] = pH3Filter(pH3(CellOutcome==1), ...
+            [CCfrac, CellIdentity, plotResults(ManualIdxs(iW)).H3cutoff, ~, ~, ltxt] = ...
+                pH3Filter(pH3(CellOutcome==1), ...
                 CellIdentity, 'savefig', savefig, 'interactive', true);
             logtxt = [logtxt '; ' ltxt];
         end
